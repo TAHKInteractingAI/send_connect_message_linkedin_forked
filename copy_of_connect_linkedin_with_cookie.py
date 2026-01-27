@@ -64,7 +64,7 @@ from google.oauth2 import service_account
 # --- CONFIG ---
 SPREADSHEET_ID = os.getenv('SPREADSHEET_ID')
 RANGE_NAME = os.getenv('RANGE_NAME')
-GOOGLE_CREDS_JSON = os.getenv('GOOGLE_APPLICATION_CREDENTIALS', 'credentials.json')
+GOOGLE_CREDS_JSON = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
 
 def get_gsheet_service():
     scopes = ['https://www.googleapis.com/auth/spreadsheets']
@@ -241,8 +241,8 @@ def login(driver: webdriver.Chrome, username: str, password: str):
 
 
 def main():
-    username ="ray@sam-foundation.org"
-    password = "tahk@1234"
+    username = os.getenv('LINKEDIN_USERNAME')
+    password = os.getenv('LINKEDIN_PASSWORD')
     global driver
     login(driver, username, password)
     COOKIES_FILE = 'linkedin_cookies.pkl'
