@@ -21,12 +21,30 @@ from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.chrome.service import Service
-from IPython.display import Image, display
+#from IPython.display import Image, display
 from dotenv import load_dotenv
 import pickle
 from PIL import Image
+# === GOOGLE SHEETS LOCAL SETUP ===
+import pickle
+import pandas as pd
+import requests
+from googleapiclient.discovery import build
+from google.oauth2 import service_account
+# === GOOGLE SHEETS LOCAL SETUP ===
+import pickle
+import pandas as pd
+import requests
+from googleapiclient.discovery import build
+from google.oauth2 import service_account
 
 load_dotenv()
+
+# --- CONFIG ---
+SPREADSHEET_ID = os.getenv('SPREADSHEET_ID')
+RANGE_NAME = os.getenv('RANGE_NAME')
+GOOGLE_CREDS_JSON = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
+print(GOOGLE_CREDS_JSON)
 
 """# **HÀM HỖ TRỢ**"""
 
@@ -48,24 +66,10 @@ def display_full_screenshot(driver):
     driver.save_screenshot('screenshot.png')
 
     # Hiển thị ảnh chụp màn hình
-    time.sleep(2)  # Đợi ảnh được lưu
-    display(Image.open('screenshot.png'))
+    # time.sleep(2)  # Đợi ảnh được lưu
+    # display(Image.open('screenshot.png'))
 
 """# **KẾT NỐI GOOGLE SHEETS**"""
-
-
-# === GOOGLE SHEETS LOCAL SETUP ===
-import pickle
-import pandas as pd
-import requests
-from googleapiclient.discovery import build
-from google.oauth2 import service_account
-
-# --- CONFIG ---
-SPREADSHEET_ID = os.getenv('SPREADSHEET_ID')
-RANGE_NAME = os.getenv('RANGE_NAME')
-GOOGLE_CREDS_JSON = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
-print(GOOGLE_CREDS_JSON)
 
 def get_gsheet_service():
     scopes = ['https://www.googleapis.com/auth/spreadsheets']
