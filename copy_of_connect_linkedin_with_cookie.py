@@ -132,7 +132,7 @@ options.add_argument('--proxy-bypass-list=*')
 options.add_argument('--start-maximized')
 
 # Use ChromeDriverManager to automatically get the driver executable path #Tối ưu tự tìm ví trí chromedriver
-service = Service(ChromeDriverManager().install())
+#service = Service(ChromeDriverManager().install())
 
 driver = webdriver.Chrome(service=service, options=options)
 
@@ -271,62 +271,134 @@ def login(driver: webdriver.Chrome, username: str, password: str):
 
 def main():
     """Hàm này chứa toàn bộ logic cũ của main() nhưng chạy ngầm"""
-    # Khởi tạo lại service và driver bên trong task để đảm bảo ổn định
-    service = get_gsheet_service()
+    # # Khởi tạo lại service và driver bên trong task để đảm bảo ổn định
+    # service = get_gsheet_service()
     
-    # Lấy dữ liệu mới nhất từ Google Sheets
-    result = service.spreadsheets().values().get(spreadsheetId=SPREADSHEET_ID, range=RANGE_NAME).execute()
-    values = result.get('values', [])
-    if not values:
-        print("INFO: No data found in Google Sheets.")
-        return
+    # # Lấy dữ liệu mới nhất từ Google Sheets
+    # result = service.spreadsheets().values().get(spreadsheetId=SPREADSHEET_ID, range=RANGE_NAME).execute()
+    # values = result.get('values', [])
+    # if not values:
+    #     print("INFO: No data found in Google Sheets.")
+    #     return
         
-    df = pd.DataFrame(values[1:], columns=values[0])
+    # df = pd.DataFrame(values[1:], columns=values[0])
     
-    current_driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    # current_driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
     
+    # try:
+    #     username = os.getenv('LINKEDIN_USERNAME')
+    #     password = os.getenv('LINKEDIN_PASSWORD')
+        
+    #     login(current_driver, username, password)
+        
+    #     if os.path.exists(COOKIES_FILE):
+    #         os.remove(COOKIES_FILE)
+            
+    #     for index, row in df.iterrows():
+    #         profile_link = row.get('Linkedin')
+    #         if not profile_link: continue
+            
+    #         print(f"Visiting profile: {profile_link}")
+    #         current_driver.get(profile_link)
+            
+    #         status = ""
+    #         try:
+    #             # Chờ nút Connect xuất hiện
+    #             WebDriverWait(current_driver, 10).until(EC.presence_of_element_located((By.XPATH, STATUS_CONNECT)))
+    #             status = check_connection(current_driver, row.get("Email để điền khi gặp câu hỏi trog lúc connect", ""))
+    #         except:
+    #             status = "CONNECTED OR ERROR"
+            
+    #         df.at[index, 'STATUS'] = status
+
+    #     # CẬP NHẬT GOOGLE SHEET
+    #     updated_values = [df.columns.tolist()] + df.values.tolist()
+    #     body = {'values': updated_values}
+    #     service.spreadsheets().values().update(
+    #         spreadsheetId=SPREADSHEET_ID, 
+    #         range=RANGE_NAME,
+    #         valueInputOption='RAW', 
+    #         body=body).execute()
+            
+    #     print("INFO: Background Task Completed Successfully.")
+
+    # except Exception as e:
+    #     print(f"ERROR in background task: {str(e)}")
+    # finally:
+    #     current_driver.quit()
+    print("--- BẮT ĐẦU CHẠY SCRIPT NGẦM ---")
+    
+    # 1. Khởi tạo Service Google Sheets bên trong hàm
     try:
+        current_service = get_gsheet_service()
+        print("✅ Đã kết nối Google Sheets Service")
+        
+        # Đọc dữ liệu mới nhất
+        result = current_service.spreadsheets().values().get(
+            spreadsheetId=SPREADSHEET_ID, range=RANGE_NAME).execute()
+        values = result.get('values', [])
+        if not values:
+            print("❌ LỖI: Không lấy được dữ liệu từ Sheets")
+            return
+            
+        current_df = pd.DataFrame(values[1:], columns=values[0])
+        print(f"✅ Đã tải DataFrame: {len(current_df)} dòng")
+    except Exception as e:
+        print(f"❌ LỖI KHỞI TẠO SHEETS: {str(e)}")
+        return
+
+    # 2. Khởi tạo Driver bên trong hàm
+    local_driver = None
+    try:
+        print("🚀 Đang khởi tạo trình duyệt Chrome...")
+        # Sử dụng đúng options bạn đã định nghĩa ở trên
+        local_driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+        print("✅ Trình duyệt đã sẵn sàng")
+
         username = os.getenv('LINKEDIN_USERNAME')
         password = os.getenv('LINKEDIN_PASSWORD')
         
-        login(current_driver, username, password)
+        print(f"🔑 Đang đăng nhập cho tài khoản: {username}")
+        login(local_driver, username, password)
         
-        if os.path.exists(COOKIES_FILE):
-            os.remove(COOKIES_FILE)
-            
-        for index, row in df.iterrows():
+        # 3. Vòng lặp chính
+        for index, row in current_df.iterrows():
             profile_link = row.get('Linkedin')
-            if not profile_link: continue
+            if not profile_link:
+                continue
             
-            print(f"Visiting profile: {profile_link}")
-            current_driver.get(profile_link)
+            print(f"📍 Đang xử lý profile: {profile_link}")
+            local_driver.get(profile_link)
+            
+            # Đợi trang tải
+            time.sleep(5) 
             
             status = ""
             try:
-                # Chờ nút Connect xuất hiện
-                WebDriverWait(current_driver, 10).until(EC.presence_of_element_located((By.XPATH, STATUS_CONNECT)))
-                status = check_connection(current_driver, row.get("Email để điền khi gặp câu hỏi trog lúc connect", ""))
-            except:
-                status = "CONNECTED OR ERROR"
+                # Kiểm tra trạng thái kết nối
+                status = check_connection(local_driver, row.get("Email để điền khi gặp câu hỏi trog lúc connect", ""))
+            except Exception as e:
+                status = "ERROR"
+                print(f"⚠️ Lỗi xử lý dòng {index}: {str(e)}")
             
-            df.at[index, 'STATUS'] = status
+            current_df.at[index, 'STATUS'] = status
+            print(f"✅ Kết quả dòng {index}: {status}")
 
-        # CẬP NHẬT GOOGLE SHEET
-        updated_values = [df.columns.tolist()] + df.values.tolist()
+        # 4. Cập nhật lại Sheets
+        print("📤 Đang gửi dữ liệu cập nhật lên Sheets...")
+        updated_values = [current_df.columns.tolist()] + current_df.values.tolist()
         body = {'values': updated_values}
-        service.spreadsheets().values().update(
-            spreadsheetId=SPREADSHEET_ID, 
-            range=RANGE_NAME,
-            valueInputOption='RAW', 
-            body=body).execute()
-            
-        print("INFO: Background Task Completed Successfully.")
+        current_service.spreadsheets().values().update(
+            spreadsheetId=SPREADSHEET_ID, range=RANGE_NAME,
+            valueInputOption='RAW', body=body).execute()
+        print("🎉 HOÀN THÀNH TOÀN BỘ!")
 
     except Exception as e:
-        print(f"ERROR in background task: {str(e)}")
+        print(f"💥 LỖI HỆ THỐNG TRONG KHI CHẠY: {str(e)}")
     finally:
-        current_driver.quit()
-
+        if local_driver:
+            local_driver.quit()
+            print("🔒 Đã đóng trình duyệt.")
 """# **XPATH**"""
 
 # XPATH ỨNG VỚI NÚT CONNECT.
@@ -542,4 +614,4 @@ def home():
     return {"status": "Server is running"}
 
 if __name__ == "__main__":
-    uvicorn.run("copy_of_connect_linkedin_with_cookie:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("copy_of_connect_linkedin_with_cookie:app", host="0.0.0.0", port=10000, reload=True)
