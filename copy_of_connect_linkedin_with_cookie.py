@@ -33,6 +33,7 @@ from googleapiclient.discovery import build
 from google.oauth2 import service_account
 # === GOOGLE SHEETS LOCAL SETUP ===
 import pickle
+import json
 import pandas as pd
 import requests
 from googleapiclient.discovery import build
@@ -72,9 +73,26 @@ def display_full_screenshot(driver):
 """# **KẾT NỐI GOOGLE SHEETS**"""
 
 def get_gsheet_service():
+    # scopes = ['https://www.googleapis.com/auth/spreadsheets']
+    # creds = service_account.Credentials.from_service_account_file(GOOGLE_CREDS_JSON, scopes=scopes)
+    # return build('sheets', 'v4', credentials=creds)
     scopes = ['https://www.googleapis.com/auth/spreadsheets']
-    creds = service_account.Credentials.from_service_account_file(GOOGLE_CREDS_JSON, scopes=scopes)
-    return build('sheets', 'v4', credentials=creds)
+    
+    # Lấy nội dung JSON từ biến môi trường
+    creds_json = os.getenv('GOOGLE_CREDS_JSON_CONTENT')
+    
+    if creds_json:
+        # Nếu đang chạy trên Render (có biến môi trường)
+        info = json.loads(creds_json)
+        creds = service_account.Credentials.from_service_account_info(info, scopes=scopes)
+    else:
+        # Nếu đang chạy Local (dùng file json cũ của bạn)
+        # Thay đường dẫn này bằng đường dẫn tương đối để tránh lỗi
+        path_to_json = 'credentials.json' 
+        creds = service_account.Credentials.from_service_account_file(path_to_json, scopes=scopes)
+        
+    service = build('sheets', 'v4', credentials=creds)
+    return service
 
 service = get_gsheet_service()
 sheet = service.spreadsheets()
