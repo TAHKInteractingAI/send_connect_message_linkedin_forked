@@ -123,7 +123,7 @@ options.add_argument('--headless')
 options.add_argument('--disable-gpu')
 options.add_argument("--window-size=1920, 1200")
 options.add_argument('--disable-blink-features=AutomationControlled')
-# Additional arguments for more stable headless execution # Tối ưu thêm option để ổn định headless exe
+# Tối ưu thêm option để ổn định headless exe
 options.add_argument('--disable-extensions')
 options.add_argument('--disable-setuid-sandbox')
 options.add_argument('--remote-allow-origins=*')
@@ -132,9 +132,9 @@ options.add_argument('--proxy-bypass-list=*')
 options.add_argument('--start-maximized')
 
 # Use ChromeDriverManager to automatically get the driver executable path #Tối ưu tự tìm ví trí chromedriver
-#service = Service(ChromeDriverManager().install())
+# service = Service(ChromeDriverManager().install())
 
-driver = webdriver.Chrome(service=service, options=options)
+# driver = webdriver.Chrome(service=service, options=options)
 
 """# **HÀM ĐĂNG NHẬP**"""
 
@@ -361,26 +361,38 @@ def main():
         print(f"🔑 Đang đăng nhập cho tài khoản: {username}")
         login(local_driver, username, password)
         
-        # 3. Vòng lặp chính
+        # 3. Vòng lặp chính: chỉ gửi connect nếu chưa kết nối, giới hạn 15/ngày
+        max_send = 15
+        sent_count = 0
         for index, row in current_df.iterrows():
+            if sent_count >= max_send:
+                print(f"Đã gửi kết nối cho {max_send} người. Dừng lại để tuân thủ giới hạn mỗi ngày.")
+                break
             profile_link = row.get('Linkedin')
             if not profile_link:
                 continue
-            
             print(f"📍 Đang xử lý profile: {profile_link}")
             local_driver.get(profile_link)
-            
             # Đợi trang tải
-            time.sleep(5) 
-            
+            time.sleep(5)
             status = ""
             try:
-                # Kiểm tra trạng thái kết nối
-                status = check_connection(local_driver, row.get("Email để điền khi gặp câu hỏi trog lúc connect", ""))
+                # Kiểm tra trạng thái kết nối trước
+                is_connected = False
+                try:
+                    # Nếu đã kết nối hoặc pending thì không gửi nữa
+                    if check_status(local_driver, STATUS_CONNECT, "Pending") or check_status(local_driver, STATUS_CONNECT, "Remove your connection"):
+                        status = "CONNECTED"
+                        is_connected = True
+                except Exception:
+                    pass
+                if not is_connected:
+                    # Nếu chưa kết nối thì gửi connect, giới hạn 15/ngày
+                    status = send_connection(local_driver, STATUS_CONNECT)
+                    sent_count += 1
             except Exception as e:
                 status = "ERROR"
                 print(f"⚠️ Lỗi xử lý dòng {index}: {str(e)}")
-            
             current_df.at[index, 'STATUS'] = status
             print(f"✅ Kết quả dòng {index}: {status}")
 
@@ -449,7 +461,7 @@ def check_status(driver: webdriver.Chrome, xpath: str, *kws):
     return False
 
 
-def check_status_in_more():
+def check_status_in_more(driver):
     # CHECK UNCONNECTED STATUS IN MORE.
     if check_status(driver, MORE_UNCONNECT, "Invite"):
         return "UNCONNECTED"
