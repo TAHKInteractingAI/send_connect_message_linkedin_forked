@@ -38,6 +38,9 @@ import pandas as pd
 import requests
 from googleapiclient.discovery import build
 from google.oauth2 import service_account
+# === FastAPI API ===
+from fastapi import FastAPI, BackgroundTasks
+import uvicorn
 
 load_dotenv()
 
@@ -120,12 +123,15 @@ options.add_argument('--headless')
 options.add_argument('--disable-gpu')
 options.add_argument("--window-size=1920, 1200")
 options.add_argument('--disable-blink-features=AutomationControlled')
-# Additional arguments for more stable headless execution
+# Additional arguments for more stable headless execution # Tối ưu thêm option để ổn định headless exe
 options.add_argument('--disable-extensions')
 options.add_argument('--disable-setuid-sandbox')
 options.add_argument('--remote-allow-origins=*')
+options.add_argument('--proxy-server="direct://"')
+options.add_argument('--proxy-bypass-list=*')
+options.add_argument('--start-maximized')
 
-# Use ChromeDriverManager to automatically get the driver executable path
+# Use ChromeDriverManager to automatically get the driver executable path #Tối ưu tự tìm ví trí chromedriver
 service = Service(ChromeDriverManager().install())
 
 driver = webdriver.Chrome(service=service, options=options)
@@ -264,38 +270,62 @@ def login(driver: webdriver.Chrome, username: str, password: str):
 
 
 def main():
-    username = os.getenv('LINKEDIN_USERNAME')
-    password = os.getenv('LINKEDIN_PASSWORD')
-    global driver
-    login(driver, username, password)
-    COOKIES_FILE = 'linkedin_cookies.pkl'
-    if os.path.exists(COOKIES_FILE):
-        os.remove(COOKIES_FILE)
-        print(f"INFO: Removed {COOKIES_FILE}")
-    else:
-        print(f"INFO: {COOKIES_FILE} not found. No cookies to remove.")
-    display_full_screenshot(driver)
-    for index, row in df.iterrows():
-        profile_link = row['Linkedin']
-        print(f"Visiting profile: {profile_link}", end=" ")
-        driver.get(profile_link)
-        display_full_screenshot(driver)
-        status = ""
-        try:
-            WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, STATUS_CONNECT)))
-            status = check_connection(driver, row["Email để điền khi gặp câu hỏi trog lúc connect"])
-        except:
-            status = "CONNECTED"
-        if 'STATUS' not in df.columns:
-            df['STATUS'] = ''
-        df.at[index, 'STATUS'] = status
-    updated_values = [df.columns.tolist()] + df.values.tolist()
-    body = {'values': updated_values}
-    result = service.spreadsheets().values().update(
-        spreadsheetId=SPREADSHEET_ID, range=RANGE_NAME,
-        valueInputOption='RAW', body=body).execute()
-    #driver.quit()
-    return {"message": "Done", "result": result}
+    """Hàm này chứa toàn bộ logic cũ của main() nhưng chạy ngầm"""
+    # Khởi tạo lại service và driver bên trong task để đảm bảo ổn định
+    service = get_gsheet_service()
+    
+    # Lấy dữ liệu mới nhất từ Google Sheets
+    result = service.spreadsheets().values().get(spreadsheetId=SPREADSHEET_ID, range=RANGE_NAME).execute()
+    values = result.get('values', [])
+    if not values:
+        print("INFO: No data found in Google Sheets.")
+        return
+        
+    df = pd.DataFrame(values[1:], columns=values[0])
+    
+    current_driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    
+    try:
+        username = os.getenv('LINKEDIN_USERNAME')
+        password = os.getenv('LINKEDIN_PASSWORD')
+        
+        login(current_driver, username, password)
+        
+        if os.path.exists(COOKIES_FILE):
+            os.remove(COOKIES_FILE)
+            
+        for index, row in df.iterrows():
+            profile_link = row.get('Linkedin')
+            if not profile_link: continue
+            
+            print(f"Visiting profile: {profile_link}")
+            current_driver.get(profile_link)
+            
+            status = ""
+            try:
+                # Chờ nút Connect xuất hiện
+                WebDriverWait(current_driver, 10).until(EC.presence_of_element_located((By.XPATH, STATUS_CONNECT)))
+                status = check_connection(current_driver, row.get("Email để điền khi gặp câu hỏi trog lúc connect", ""))
+            except:
+                status = "CONNECTED OR ERROR"
+            
+            df.at[index, 'STATUS'] = status
+
+        # CẬP NHẬT GOOGLE SHEET
+        updated_values = [df.columns.tolist()] + df.values.tolist()
+        body = {'values': updated_values}
+        service.spreadsheets().values().update(
+            spreadsheetId=SPREADSHEET_ID, 
+            range=RANGE_NAME,
+            valueInputOption='RAW', 
+            body=body).execute()
+            
+        print("INFO: Background Task Completed Successfully.")
+
+    except Exception as e:
+        print(f"ERROR in background task: {str(e)}")
+    finally:
+        current_driver.quit()
 
 """# **XPATH**"""
 
@@ -409,7 +439,7 @@ def send_connection(driver: webdriver.Chrome, xpath: str):
         except Exception as ex:
             return f"ERROR: FAILED TO CLICK CONNECT BUTTON: {ex}"
 
-        # Wait for the 'Send without note' button to be present and clickable
+        # Wait for the 'Send without note' button to be present and clickable  #Tối ưu chờ khi thành công
         try:
             e = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, BUTTON_SEND_WITHOUT_NOTE)))
             e.click()
@@ -484,27 +514,32 @@ def check_connection(driver: webdriver.Chrome, email: str, note: str = None):
 #     df.at[index, 'STATUS'] = status
 
 # UPDATE GOOGLE SHEET DATA.
-updated_values = [df.columns.tolist()] + df.values.tolist()
-body = {'values': updated_values}
-service = get_gsheet_service()
-print(service)
-print(type(service))
-result = service.spreadsheets().values().update(
-    spreadsheetId=SPREADSHEET_ID, range=RANGE_NAME,
-    valueInputOption='RAW', body=body).execute()
+# updated_values = [df.columns.tolist()] + df.values.tolist()
+# body = {'values': updated_values}
+# service = get_gsheet_service()
+# print(service)
+# print(type(service))
+# result = service.spreadsheets().values().update(
+#     spreadsheetId=SPREADSHEET_ID, range=RANGE_NAME,
+#     valueInputOption='RAW', body=body).execute()
 
 """# **KẾT THÚC CHƯƠNG TRÌNH**"""
 
 
-# === FastAPI API ===
-from fastapi import FastAPI
-import uvicorn
-
 app = FastAPI()
 
 @app.post("/run-main")
-def run_main():
-    return main()
+async def run_main_api(background_tasks: BackgroundTasks):
+    """API Endpoint trả về ngay lập tức cho Cron-job"""
+    background_tasks.add_task(main)
+    return {
+        "message": "Script has started in background",
+        "status": "processing"
+    }
+
+@app.get("/")
+def home():
+    return {"status": "Server is running"}
 
 if __name__ == "__main__":
     uvicorn.run("copy_of_connect_linkedin_with_cookie:app", host="0.0.0.0", port=8000, reload=True)
