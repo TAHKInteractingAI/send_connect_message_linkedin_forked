@@ -65,6 +65,7 @@ from google.oauth2 import service_account
 SPREADSHEET_ID = os.getenv('SPREADSHEET_ID')
 RANGE_NAME = os.getenv('RANGE_NAME')
 GOOGLE_CREDS_JSON = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
+print(GOOGLE_CREDS_JSON)
 
 def get_gsheet_service():
     scopes = ['https://www.googleapis.com/auth/spreadsheets']
@@ -440,30 +441,32 @@ def check_connection(driver: webdriver.Chrome, email: str, note: str = None):
         return "ERROR: UNKNOWN"
 
 """# **THỰC HIỆN GỬI KẾT NỐI**"""
+# for index, row in df.iterrows():
+#     # GO TO PROFILE LINK.
+#     profile_link = row['Linkedin'] # Corrected column name from 'Link' to 'Linkedin'
+#     print(f"Visiting profile: {profile_link}", end=" ")
+#     driver.get(profile_link)
+#     display_full_screenshot(driver)
+#     status = ""
+#     # Đợi trang tải đầy đủ trước khi kiểm tra kết nối
+#     try:
+#       WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, STATUS_CONNECT)))
+#       # CHECK CONNECTION AND SEND WITHOUT NOTE.
+#       status = check_connection(driver, row["Email để điền khi gặp câu hỏi trog lúc connect"])  # Không gửi ghi chú
+#     except:
+#       status = "CONNECTED"
 
-for index, row in df.iterrows():
-    # GO TO PROFILE LINK.
-    profile_link = row['Linkedin'] # Corrected column name from 'Link' to 'Linkedin'
-    print(f"Visiting profile: {profile_link}", end=" ")
-    driver.get(profile_link)
-    display_full_screenshot(driver)
-    status = ""
-    # Đợi trang tải đầy đủ trước khi kiểm tra kết nối
-    try:
-      WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, STATUS_CONNECT)))
-      # CHECK CONNECTION AND SEND WITHOUT NOTE.
-      status = check_connection(driver, row["Email để điền khi gặp câu hỏi trog lúc connect"])  # Không gửi ghi chú
-    except:
-      status = "CONNECTED"
-
-    # Ensure the 'STATUS' column exists before trying to assign a value
-    if 'STATUS' not in df.columns:
-        df['STATUS'] = ''
-    df.at[index, 'STATUS'] = status
+#     # Ensure the 'STATUS' column exists before trying to assign a value
+#     if 'STATUS' not in df.columns:
+#         df['STATUS'] = ''
+#     df.at[index, 'STATUS'] = status
 
 # UPDATE GOOGLE SHEET DATA.
 updated_values = [df.columns.tolist()] + df.values.tolist()
 body = {'values': updated_values}
+service = get_gsheet_service()
+print(service)
+print(type(service))
 result = service.spreadsheets().values().update(
     spreadsheetId=SPREADSHEET_ID, range=RANGE_NAME,
     valueInputOption='RAW', body=body).execute()
