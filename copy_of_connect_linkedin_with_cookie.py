@@ -347,7 +347,7 @@ def main():
         print(f"❌ LỖI KHỞI TẠO SHEETS: {str(e)}")
         return
 
-    # 2. Khởi tạo Driver bên trong hàm
+    # 2. Khởi tạo Driver bên trong hàm #Tối ưu nhằm tránh lỗi docker 
     local_driver = None
     try:
         print("🚀 Đang khởi tạo trình duyệt Chrome...")
@@ -361,7 +361,7 @@ def main():
         print(f"🔑 Đang đăng nhập cho tài khoản: {username}")
         login(local_driver, username, password)
         
-        # 3. Vòng lặp chính: chỉ gửi connect nếu chưa kết nối, giới hạn 15/ngày
+        # 3. Vòng lặp chính: chỉ gửi connect nếu chưa kết nối, giới hạn 15/ngày #Tối ưu giới hạn
         max_send = 15
         sent_count = 0
         for index, row in current_df.iterrows():
