@@ -78,15 +78,14 @@ def get_gsheet_service():
     # return build('sheets', 'v4', credentials=creds)
     scopes = ['https://www.googleapis.com/auth/spreadsheets']
         
-    if GOOGLE_CREDS:
-        # Nếu đang chạy trên Render (có biến môi trường)
-        info = json.loads(GOOGLE_CREDS)
-        creds = service_account.Credentials.from_service_account_info(info, scopes=scopes)
-    else:
-        # Nếu đang chạy Local (dùng file json cũ của bạn)
-        # Thay đường dẫn này bằng đường dẫn tương đối để tránh lỗi
-        path_to_json = 'credentials.json' 
-        creds = service_account.Credentials.from_service_account_file(path_to_json, scopes=scopes)
+    #if GOOGLE_CREDS:
+    info = json.loads(GOOGLE_CREDS)
+    creds = service_account.Credentials.from_service_account_info(info, scopes=scopes)
+    # else:
+    #     # Nếu đang chạy Local (dùng file json cũ của bạn)
+    #     # Thay đường dẫn này bằng đường dẫn tương đối để tránh lỗi
+    #     path_to_json = 'credentials.json' 
+    #     creds = service_account.Credentials.from_service_account_file(path_to_json, scopes=scopes)
         
     service = build('sheets', 'v4', credentials=creds)
     return service
