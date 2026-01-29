@@ -36,4 +36,4 @@ COPY . .
 # Port 10000 là mặc định của Render
 EXPOSE 10000
 
-CMD ["uvicorn", "copy_of_connect_linkedin_with_cookie:app", "--host", "0.0.0.0", "--port", "10000"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "10000"]

@@ -1,0 +1,31 @@
+name: LinkedIn Auto Connect
+on:
+  repository_dispatch:
+    types: [run-linkedin-connect]  # Tên sự kiện để bạn gọi từ cron-job.org
+  workflow_dispatch:              # Cho phép bạn bấm nút chạy thủ công trên giao diện GitHub
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install selenium webdriver-manager pandas requests google-api-python-client google-auth-httplib2 google-auth-oauthlib python-dotenv Pillow
+
+      - name: Run LinkedIn Script
+        env:
+          # Cấu hình toàn bộ Secret vào đây
+          SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
+          RANGE_NAME: ${{ secrets.RANGE_NAME }}
+          GOOGLE_CREDS_JSON_CONTENT: ${{ secrets.GOOGLE_CREDS_JSON_CONTENT }}
+          LINKEDIN_USERNAME: ${{ secrets.LINKEDIN_USERNAME }}
+          LINKEDIN_PASSWORD: ${{ secrets.LINKEDIN_PASSWORD }}
+        run: python run_action.py
