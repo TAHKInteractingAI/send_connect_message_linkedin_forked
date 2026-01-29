@@ -25,7 +25,7 @@ jobs:
           # Cấu hình toàn bộ Secret vào đây
           SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
           RANGE_NAME: ${{ secrets.RANGE_NAME }}
-          GOOGLE_CREDS_JSON_CONTENT: ${{ secrets.GOOGLE_CREDS_JSON_CONTENT }}
+          GOOGLE_APPLICATION_CRED: ${{ secrets.GOOGLE_APPLICATION_CRED }}
           LINKEDIN_USERNAME: ${{ secrets.LINKEDIN_USERNAME }}
           LINKEDIN_PASSWORD: ${{ secrets.LINKEDIN_PASSWORD }}
         run: python run_action.py
