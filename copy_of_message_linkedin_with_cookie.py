@@ -211,6 +211,8 @@ def login_with_cookie(driver):
         time.sleep(5)
         
         print("INFO: Đã thực hiện add Cookie!")
+        print(f"Tiêu đề trang hiện tại: {driver.title}")
+
     else:
         print("ERROR: Không tìm thấy LINKEDIN_COOKIE")
         
