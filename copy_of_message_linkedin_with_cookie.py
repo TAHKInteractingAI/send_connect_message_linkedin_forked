@@ -1,6 +1,8 @@
 
+import json
 import os
 import time
+import random
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -8,71 +10,93 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
-from IPython.display import Image, display
+#from IPython.display import Image, display
 from oauth2client.service_account import ServiceAccountCredentials
 from fastapi import FastAPI
 import pandas as pd
+from dotenv import load_dotenv
 import gspread
+from pathlib import Path
+
+load_dotenv()
+
+"""# **CONFIG**"""
+MAX_MESSAGES_PER_DAY = 15
 
 """# **HÀM HỖ TRỢ**"""
+def human_type(element, text):
+    """Gõ phím như người thật với độ trễ ngẫu nhiên"""
+    for char in text:
+        element.send_keys(char)
+        time.sleep(random.uniform(0.1, 0.3))
+def random_delay(min_s=2, max_s=5):
+    time.sleep(random.uniform(min_s, max_s))
+    
+# def display_screenshot(driver: webdriver.Chrome, file_name: str = 'screenshot.png'):
+#     driver.save_screenshot(file_name)
+#     time.sleep(5)
+#     display(Image(filename=file_name))
 
-def display_screenshot(driver: webdriver.Chrome, file_name: str = 'screenshot.png'):
-    driver.save_screenshot(file_name)
-    time.sleep(5)
-    display(Image(filename=file_name))
 
+# def capture_full_page_screenshot(driver: webdriver.Chrome, file_name: str = 'full_screenshot.png'):
+#     # Cấu hình lại kích thước cửa sổ để chụp toàn màn hình
+#     total_width = driver.execute_script("return document.body.scrollWidth")
+#     total_height = driver.execute_script("return document.body.scrollHeight")
+#     driver.set_window_size(total_width, total_height)
 
-def capture_full_page_screenshot(driver: webdriver.Chrome, file_name: str = 'full_screenshot.png'):
-    # Cấu hình lại kích thước cửa sổ để chụp toàn màn hình
-    total_width = driver.execute_script("return document.body.scrollWidth")
-    total_height = driver.execute_script("return document.body.scrollHeight")
-    driver.set_window_size(total_width, total_height)
+#     # Chụp ảnh màn hình với kích thước đã cấu hình
+#     driver.save_screenshot(file_name)
 
-    # Chụp ảnh màn hình với kích thước đã cấu hình
-    driver.save_screenshot(file_name)
-
-    # Hiển thị ảnh đã chụp
-    time.sleep(2)
-    display(Image(filename=file_name))
+#     # Hiển thị ảnh đã chụp
+#     time.sleep(2)
+#     display(Image(filename=file_name))
 
 """# **KẾT NỐI GOOGLE SHEETS**"""
-
-
 
 # Thông tin bảng tính
 SPREADSHEET_ID = os.getenv('SPREADSHEET_MESS_ID')
 SHEET_NAME = 'Sheet1'
 RANGE_NAME = 'A:E'
-KEYFILE_PATH = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
+GOOGLE_CREDS = os.getenv('GOOGLE_APPLICATION_CRED')
 
 # Xác thực với Google Sheets API
 scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
-creds = ServiceAccountCredentials.from_json_keyfile_name(KEYFILE_PATH, scope)
+info = json.loads(GOOGLE_CREDS)
+creds = ServiceAccountCredentials.from_json_keyfile_dict(info, scope)
 client = gspread.authorize(creds)
 
 # Lấy dữ liệu từ bảng tính
 sheet = client.open_by_key(SPREADSHEET_ID).worksheet('Sheet1')
 values = sheet.get_all_values()
-df = pd.DataFrame(values[1:], columns=values[0])
+df = pd.DataFrame(values[3:], columns=values[1])
 
-print(df)
+#print(df)
 
 """# **HIỂN THỊ THÔNG TIN GOOGLE SHEETS**"""
 
-df.head()
+# df.head()
 
 """# **CẤU HÌNH DRIVER**"""
+def get_driver():
+    options = webdriver.ChromeOptions()
+    
+    options.add_argument('--no-sandbox')
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument('--headless=new')
+    options.add_argument('--disable-gpu')
+    options.add_argument("--window-size=1920, 1200")
+    options.add_argument('--disable-dev-shm-usage')
+    # Giả lập User-Agent thật để tránh bị phát hiện là Bot
+    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36")
+    options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    options.add_experimental_option('useAutomationExtension', False)
+    options.add_argument("--disable-blink-features=AutomationControlled")
+    options.add_experimental_option("useAutomationExtension", False)
 
-options = webdriver.ChromeOptions()
-
-options.add_argument('--no-sandbox')
-options.add_argument("--disable-dev-shm-usage")
-options.add_argument('--headless')
-options.add_argument('--disable-gpu')
-options.add_argument("--window-size=1920, 1200")
-options.add_argument('--disable-dev-shm-usage')
-
-driver = webdriver.Chrome(options=options)
+    driver = webdriver.Chrome(options=options)
+    # Ẩn thuộc tính webdriver của trình duyệt
+    driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+    return driver
 
 """# **HÀM ĐĂNG NHẬP**"""
 
@@ -85,6 +109,38 @@ def handle_cookie_acceptance(driver: webdriver.Chrome):
 
 def handle_code_verification(driver: webdriver.Chrome):
     try:
+        # --- CODE MỚI: XỬ LÝ "I AM NOT A ROBOT" ---
+        # --- PHẦN XỬ LÝ CHECKBOX ROBOT ---
+        try:
+            # 1. Đợi iframe xuất hiện (dùng Selector linh hoạt hơn)
+            recaptcha_iframe = WebDriverWait(driver, 15).until(
+                EC.presence_of_element_located((By.XPATH, "//iframe[contains(@title, 'reCAPTCHA')]"))
+            )
+            
+            # 2. Chuyển hướng Driver vào iframe
+            driver.switch_to.frame(recaptcha_iframe)
+            print("INFO: Đã vào trong Iframe.")
+
+            # 3. Tìm checkbox bằng ID hoặc Class (vì thỉnh thoảng ID bị thay đổi)
+            checkbox_selector = (By.ID, "recaptcha-anchor")
+            # Nếu ID không chạy, có thể thử: (By.CSS_SELECTOR, ".recaptcha-checkbox-border")
+
+            captcha_checkbox = WebDriverWait(driver, 10).until(
+                EC.element_to_be_clickable(checkbox_selector)
+            )
+            
+            # 4. Click bằng JavaScript để tránh bị lỗi "Element Click Intercepted"
+            driver.execute_script("arguments[0].click();", captcha_checkbox)
+            print("INFO: Đã click Checkbox!")
+            
+            # Đợi 1 chút xem có hiện bảng chọn hình ảnh không
+            time.sleep(2) 
+            
+        except Exception as e:
+            print(f"LỖI CHI TIẾT: {e}")
+        finally:
+            # LUÔN LUÔN phải thoát khỏi iframe để làm việc tiếp với trang chính
+            driver.switch_to.default_content()
         # FIND VERIFICATION FIELD.
         ID_FIELD = "input__email_verification_pin"
         CONDITION = EC.presence_of_element_located((By.ID, ID_FIELD))
@@ -106,7 +162,7 @@ def login(driver: webdriver.Chrome, username, password):
     try:
         driver.get("https://www.linkedin.com/login")
         # display_screenshot(driver)
-        capture_full_page_screenshot(driver)
+        #capture_full_page_screenshot(driver)
         # WAIT FOR LOADING PAGE.
         XPATH_USERNAME, XPATH_PASSWORD = '//*[@id="username"]', '//*[@id="password"]'
         username_field = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, XPATH_USERNAME)))
@@ -128,14 +184,36 @@ def login(driver: webdriver.Chrome, username, password):
     handle_code_verification(driver)
     handle_cookie_acceptance(driver)
     time.sleep(5)
-    display_screenshot(driver)
+    #display_screenshot(driver)
 
-"""# **THỰC HIỆN ĐĂNG NHẬP**"""
+def login_with_cookie(driver):
+    # Bước 1: Phải vào trang chủ để trình duyệt nhận diện Domain trước
+    driver.get("https://www.linkedin.com")
+    time.sleep(2) # Đợi một chút để trang load sơ bộ
 
-username = os.getenv("LINKEDIN_MESS_USERNAME")
-password = os.getenv("LINKEDIN_MESS_PASSWORD")
-
-login(driver, username, password)
+    li_at_cookie = os.getenv("LINKEDIN_COOKIE")
+    
+    if li_at_cookie:
+        # Xóa các cookie rác hiện có để tránh xung đột
+        driver.delete_all_cookies()
+        
+        # Bước 2: Thêm Cookie với cấu hình chi tiết hơn
+        driver.add_cookie({
+            "name": "li_at",
+            "value": li_at_cookie,
+            "domain": ".linkedin.com", # Quan trọng: Phải có dấu chấm ở đầu
+            "path": "/",
+            "secure": True
+        })
+        
+        # Bước 3: Refresh lại trang để LinkedIn nhận diện phiên đăng nhập
+        driver.get("https://www.linkedin.com/feed/") # Đi thẳng vào trang Feed thay vì trang chủ
+        time.sleep(5)
+        
+        print("INFO: Đã thực hiện add Cookie!")
+    else:
+        print("ERROR: Không tìm thấy LINKEDIN_COOKIE")
+        
 
 """# **XPATH**"""
 
@@ -153,8 +231,11 @@ BUTTON_SUBMIT_MESSAGE = "msg-form__send-button"
 #BUTTON_CLOSE_MESSAGE = "/html/body/div[5]/div[4]/aside[1]/div[2]/div[1]/header/div[4]/button[3]"
 BUTTON_CLOSE_MESSAGE = "/html/body/div[6]/div[4]/aside[1]/div[2]/div[1]/header/div[4]/button[3]"
 
-"""# **HÀM GỬI TIN NHẮN**"""
+# XPATH cập nhật (LinkedIn thường xuyên đổi ID nên dùng Class hoặc Text ổn định hơn)
+FIELD_MESSAGE_CLASS = "msg-form__contenteditable"
+BUTTON_SEND_CLASS = "msg-form__send-button"
 
+"""# **HÀM GỬI TIN NHẮN**"""
 def check_datum(datum):
     # KIỂM TRA TÊN.
     name = datum["Name"]
@@ -166,19 +247,36 @@ def check_datum(datum):
     if not message:
         print("ERROR: MESSAGE NOT FOUND!")
         return "ERROR: MESSAGE NOT FOUND!"
-    # KIỂM TRA TỆP ĐÍNH KÈM.
-    attachment = datum["Attachment"]
-    # !wget https://github.com/TAHKInteractingAI/Automatic_Colab/blob/main/HenryUniversesResume.pdf
-    # !wget https://github.com/TAHKInteractingAI/Automatic_Colab/blob/main/tokyo-vigil-436805-j9-d6e61a754dce.json
-
-    url = '/content/' + attachment
-    print(url)
-    if attachment:
-        rel_path = os.path.join(attachment)
-        abs_path = os.path.abspath(rel_path)
-        if not os.path.exists(abs_path):
-            print("ERROR: ATTACHMENT NOT FOUND!")
+    # KIỂM TRA TỆP ĐÍNH KÈM. (XỮ LÍ ĐA NỀN TẢNG)
+    #attachment = datum["Attachment"]
+    # !wget https://github.com/InteractingAI/Automatic_Colab/blob/main/HenryUniversesResume.pdf
+    # !wget https://github.com/InteractingAI/Automatic_Colab/blob/main/tokyo-vigil-436805-j9-d6e61a754dce.json
+    attachment_name = datum.get("Attachment")
+    abs_path = None
+    if attachment_name and str(attachment_name).strip():
+        # Lấy thư mục gốc nơi script đang chạy (tương thích cả Local và Server)
+        # Nếu chạy trên GitHub Actions, nó sẽ là thư mục repo
+        base_path = Path(__file__).parent.absolute()
+        
+        # Kết hợp đường dẫn một cách an toàn
+        file_path = base_path / attachment_name
+        
+        if file_path.exists():
+            abs_path = str(file_path)
+            print(f"INFO: Attachment found at: {abs_path}")
+        else:
+            # log lỗi để debug trên server dễ hơn
+            print(f"ERROR: Cannot find {attachment_name} in {base_path}")
             return "ERROR: ATTACHMENT NOT FOUND"
+    
+    # url = '/content/' + attachment
+    # print(url)
+    # if attachment:
+    #     rel_path = os.path.join(attachment)
+    #     abs_path = os.path.abspath(rel_path)
+    #     if not os.path.exists(abs_path):
+    #         print("ERROR: ATTACHMENT NOT FOUND!")
+    #         return "ERROR: ATTACHMENT NOT FOUND"
     # XỬ LÝ TIN NHẮN.
     message = message.replace("{{Name}}", name)
 
@@ -231,7 +329,7 @@ def send_message(driver: webdriver.Chrome, target_profile, datum):
             # ĐÍNH KÈM TỆP.
             e.send_keys(attachment)
             # capture_full_page_screenshot(driver)
-            display_screenshot(driver)
+            #display_screenshot(driver)
             time.sleep(2)
 
         # TÌM KIẾM NÚT GỬI TIN NHẮN.
@@ -264,11 +362,66 @@ def send_message(driver: webdriver.Chrome, target_profile, datum):
         print("\n" + str(e))
         return "ERROR: MESSAGE NOT SENT!"
 
+def send_message_optimized(driver, row):
+    try:
+        name = row['Name']
+        message_template = row['Message'].replace("{{Name}}", name)
+        attachment_path = os.path.abspath(row['Attachment']) if row['Attachment'] else None
+        
+        # TÌM NÚT MESSAGE
+        try:
+            msg_btn = WebDriverWait(driver, 10).until(
+               EC.element_to_be_clickable((By.XPATH, "//button[contains(@aria-label, 'Send a message')]"))
+            )
+            msg_btn.click()
+        except:
+            return "ERROR: MESSAGE BUTTON NOT FOUND"
+        random_delay(1, 3)
+        
+        # NHẬP NỘI DUNG
+        msg_box = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located(By.CLASS_NAME, FIELD_MESSAGE_CLASS)
+        )
+        msg_box.click()
+        human_type(msg_box, message_template)
+        
+        # ATTACHMENT (NẾU CÓ)
+        if attachment_path and os.path.exists(attachment_path):
+            attach_input = driver.find_element(By.CLASS_NAME, "msg-form__attachment-upload-input")
+            attach_input.send_keys(attachment_path)
+            random_delay(3, 5)
+        
+        # GỬI
+        send_btn = driver.find_element(By.CLASS_NAME, BUTTON_SEND_CLASS)
+        
+        if send_btn.is_enabled():
+            send_btn.click()
+            random_delay(2, 4)
+            return "SUCCESS"
+        else:
+            return "ERROR: SEND BUTTON DISABLED"
+        
+    except Exception as e:
+        return f"ERROR: {str(e)}"
+    
 """# **THỰC HIỆN GỬI TIN NHẮN**"""
 
-# DUYỆT QUA TỪNG PROFILE VÀ GỬI TIN NHẮN.
 def main_mess():
+    """# **THỰC HIỆN ĐĂNG NHẬP**"""
+
+    # username = os.getenv("LINKEDIN_USERNAME")
+    # password = os.getenv("LINKEDIN_PASSWORD")
+
+    driver = get_driver()
+    #login(driver, username, password)
+    login_with_cookie(driver=driver)
+    send_count = 0
+    
+    # DUYỆT QUA TỪNG PROFILE VÀ GỬI TIN NHẮN.
     for index, row in df.iterrows():
+        if send_count >= MAX_MESSAGES_PER_DAY:
+            print("Đã đạt giới hạn 15 người/ngày")
+            break
         profile_link = row['Link']
         print(profile_link, end=" ")
         # KIỂM TRA DỮ LIỆU.
@@ -276,17 +429,39 @@ def main_mess():
         if isinstance(datum, str):
             status = datum
         else:
-            driver.get(profile_link)
-            # GỬI TIN NHẮN.
-            status = send_message(driver, profile_link, datum)
-            # capture_full_page_screenshot(driver)
-            display_screenshot(driver)
+            try:
+                driver.get(profile_link)
+                random_delay(5,10) #tránh bị LinkedIn quét bot
+                # GỬI TIN NHẮN.
+                #status = send_message(driver, profile_link, datum)
+                status = send_message_optimized(driver, row)
+                #df.at[index, 'Status'] = status
+                
+                if status == "SUCCESS":
+                    send_count += 1
+                    status = "MESSAGE_SENT"
+                    print(f"Gửi thành công đến {row['Name']} - {send_count}/15")
+                
+            except Exception as e:
+                status = f"ERROR: {str(e)}"
+                print(status)
+                
+                # capture_full_page_screenshot(driver)
+                #display_screenshot(driver)
         # LƯU TRẠNG THÁI.
         df.at[index, 'Status'] = status
+        print(f"Đã lưu trạng thái {status} cho {row['Status']}")
+        if send_count < MAX_MESSAGES_PER_DAY:
+            random_delay(15, 20)
     # CẬP NHẬT TRẠNG THÁI LÊN GOOGLE SHEETS.
-    updated_values = [df.columns.tolist()] + df.values.tolist()
-    sheet.update(RANGE_NAME, updated_values)
-
-
-"""# **KẾT THÚC CHƯƠNG TRÌNH**"""
+    # try:
+    #     updated_values = [df.columns.tolist()] + df.values.tolist()
+    #     #sheet.update(RANGE_NAME, updated_values)
+    #     sheet.update(updated_values)
+    #     print("\nINFO: Đã cập nhật trạng thái lên Google Sheets.")
+    # except Exception as e:
+    #     print(f"CRITICAL ERROR: Không thể cập nhật Google Sheets: {e}")
+    
+    """# **KẾT THÚC CHƯƠNG TRÌNH**"""
+    driver.quit()
 

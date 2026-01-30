@@ -1,11 +1,11 @@
-name: LinkedIn Auto Connect
+name: LinkedIn Automation
 on:
   repository_dispatch:
-    types: [run-linkedin-connect]  # Tên sự kiện để bạn gọi từ cron-job.org
-  workflow_dispatch:              # Cho phép bạn bấm nút chạy thủ công trên giao diện GitHub
+    types: [run-linkedin-connect, run-linkedin-message] # Hỗ trợ 2 loại sự kiện
+  workflow_dispatch:
 
 jobs:
-  build:
+  automation:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -18,14 +18,26 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install selenium webdriver-manager pandas requests google-api-python-client google-auth-httplib2 google-auth-oauthlib python-dotenv Pillow
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
-      - name: Run LinkedIn Script
+      - name: Run Connect Script
+        if: github.event.action == 'run-linkedin-connect'
         env:
-          # Cấu hình toàn bộ Secret vào đây
           SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
           RANGE_NAME: ${{ secrets.RANGE_NAME }}
           GOOGLE_APPLICATION_CRED: ${{ secrets.GOOGLE_APPLICATION_CRED }}
           LINKEDIN_USERNAME: ${{ secrets.LINKEDIN_USERNAME }}
           LINKEDIN_PASSWORD: ${{ secrets.LINKEDIN_PASSWORD }}
-        run: python run_action.py
+          LINKEDIN_COOKIE: ${{ secrets.LINKEDIN_COOKIE }}
+        run: python -c "from copy_of_connect_linkedin_with_cookie import main_connect; main_connect()"
+
+      - name: Run Message Script
+        if: github.event.action == 'run-linkedin-message'
+        env:
+          SPREADSHEET_MESS_ID: ${{ secrets.SPREADSHEET_MESS_ID }}
+          GOOGLE_APPLICATION_CRED: ${{ secrets.GOOGLE_APPLICATION_CRED }}
+          LINKEDIN_USERNAME: ${{ secrets.LINKEDIN_USERNAME }}
+          LINKEDIN_PASSWORD: ${{ secrets.LINKEDIN_PASSWORD }}
+          LINKEDIN_COOKIE: ${{ secrets.LINKEDIN_COOKIE }}
+        run: python -c "from copy_of_message_linkedin_with_cookie import main_mess; main_mess()"
