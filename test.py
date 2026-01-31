@@ -1,27 +1,3 @@
-# # from dotenv import load_dotenv
-# # import os, json
-# # import gspread
-# # import pandas as pd
-# # from oauth2client.service_account import ServiceAccountCredentials
-# # load_dotenv()
-
-# # SPREADSHEET_ID = os.getenv('SPREADSHEET_MESS_ID')
-# # SHEET_NAME = 'Sheet1'
-# # RANGE_NAME = 'A:E'
-# # GOOGLE_CREDS = os.getenv('GOOGLE_APPLICATION_CRED')
-
-# # # Xác thực với Google Sheets API
-# # scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
-# # info = json.loads(GOOGLE_CREDS)
-# # creds = ServiceAccountCredentials.from_json_keyfile_dict(info, scope)
-# # client = gspread.authorize(creds)
-
-# # # Lấy dữ liệu từ bảng tính
-# # sheet = client.open_by_key(SPREADSHEET_ID).worksheet('Sheet1')
-# # values = sheet.get_all_values()
-# # df = pd.DataFrame(values[1:], columns=values[1])
-# # for index, row in df.iterrows():
-# #     print(index, row)
 # import os
 # import time
 # from selenium import webdriver

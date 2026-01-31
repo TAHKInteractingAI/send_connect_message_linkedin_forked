@@ -2,7 +2,7 @@
 import json
 import os
 import time
-import random
+import random, pickle
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -22,6 +22,7 @@ load_dotenv()
 
 """# **CONFIG**"""
 MAX_MESSAGES_PER_DAY = 15
+COOKIES_FILE = 'linkedin_cookies.pkl'
 
 """# **HÀM HỖ TRỢ**"""
 def human_type(element, text):
@@ -68,7 +69,7 @@ client = gspread.authorize(creds)
 # Lấy dữ liệu từ bảng tính
 sheet = client.open_by_key(SPREADSHEET_ID).worksheet('Sheet1')
 values = sheet.get_all_values()
-df = pd.DataFrame(values[3:], columns=values[1])
+df = pd.DataFrame(values[2:], columns=values[1])
 
 #print(df)
 
@@ -80,6 +81,9 @@ df = pd.DataFrame(values[3:], columns=values[1])
 def get_driver():
     options = webdriver.ChromeOptions()
     
+    user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    options.add_argument(f"user-agent={user_agent}")
+
     options.add_argument('--no-sandbox')
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument('--headless=new')
@@ -99,7 +103,7 @@ def get_driver():
     return driver
 
 """# **HÀM ĐĂNG NHẬP**"""
-
+                
 def handle_cookie_acceptance(driver: webdriver.Chrome):
     try:
         driver.find_element(By.XPATH, "//button[span[text()='Accept']]").click()
@@ -183,38 +187,47 @@ def login(driver: webdriver.Chrome, username, password):
     # CHECK VERIFY.
     handle_code_verification(driver)
     handle_cookie_acceptance(driver)
+    
     time.sleep(5)
     #display_screenshot(driver)
 
 def login_with_cookie(driver):
-    # Bước 1: Phải vào trang chủ để trình duyệt nhận diện Domain trước
-    driver.get("https://www.linkedin.com")
-    time.sleep(2) # Đợi một chút để trang load sơ bộ
+    """Xử lý đăng nhập bằng Cookie li_at từ .env"""
+    print("INFO: Đang thử đăng nhập bằng Cookie...")
+    # Bước 1: Vào domain LinkedIn trước để trình duyệt chấp nhận cookie
+    driver.get("https://www.linkedin.com/login")
+    time.sleep(3)
 
     li_at_cookie = os.getenv("LINKEDIN_COOKIE")
     
     if li_at_cookie:
-        # Xóa các cookie rác hiện có để tránh xung đột
-        driver.delete_all_cookies()
-        
-        # Bước 2: Thêm Cookie với cấu hình chi tiết hơn
-        driver.add_cookie({
-            "name": "li_at",
-            "value": li_at_cookie,
-            "domain": ".linkedin.com", # Quan trọng: Phải có dấu chấm ở đầu
-            "path": "/",
-            "secure": True
-        })
-        
-        # Bước 3: Refresh lại trang để LinkedIn nhận diện phiên đăng nhập
-        driver.get("https://www.linkedin.com/feed/") # Đi thẳng vào trang Feed thay vì trang chủ
-        time.sleep(5)
-        
-        print("INFO: Đã thực hiện add Cookie!")
-        print(f"Tiêu đề trang hiện tại: {driver.title}")
-
+        try:
+            driver.delete_all_cookies()
+            driver.add_cookie({
+                "name": "li_at",
+                "value": li_at_cookie,
+                "domain": ".linkedin.com",
+                "path": "/",
+                "secure": True
+            })
+            
+            # Bước 2: Refresh vào trang Feed
+            driver.get("https://www.linkedin.com/feed/")
+            time.sleep(5)
+            
+            # Bước 3: Kiểm tra xem đã vào được Feed chưa (tránh trường hợp cookie hết hạn)
+            if "feed" in driver.current_url.lower():
+                print(f"SUCCESS: Đăng nhập Cookie thành công! Tiêu đề: {driver.current_url.lower()}")
+                return True
+            else:
+                print("WARNING: Cookie không hiệu lực (có thể đã hết hạn).")
+                return False
+        except Exception as e:
+            print(f"ERROR: Lỗi khi add cookie: {e}")
+            return False
     else:
-        print("ERROR: Không tìm thấy LINKEDIN_COOKIE")
+        print("ERROR: Không tìm thấy biến môi trường LINKEDIN_COOKIE")
+        return False
         
 
 """# **XPATH**"""
@@ -259,17 +272,13 @@ def check_datum(datum):
         # Lấy thư mục gốc nơi script đang chạy (tương thích cả Local và Server)
         # Nếu chạy trên GitHub Actions, nó sẽ là thư mục repo
         base_path = Path(__file__).parent.absolute()
-        
-        # Kết hợp đường dẫn một cách an toàn
         file_path = base_path / attachment_name
         
         if file_path.exists():
             abs_path = str(file_path)
             print(f"INFO: Attachment found at: {abs_path}")
         else:
-            # log lỗi để debug trên server dễ hơn
-            print(f"ERROR: Cannot find {attachment_name} in {base_path}")
-            return "ERROR: ATTACHMENT NOT FOUND"
+            print(f"WARNING: File {attachment_name} không tồn tại tại {base_path}. Sẽ gửi tin không đính kèm.")
     
     # url = '/content/' + attachment
     # print(url)
@@ -368,8 +377,9 @@ def send_message_optimized(driver, row):
     try:
         name = row['Name']
         message_template = row['Message'].replace("{{Name}}", name)
-        attachment_path = os.path.abspath(row['Attachment']) if row['Attachment'] else None
-        
+        attachment_path = None
+        if row.get('Attachment') and str(row.get('Attachment')).strip()!= "":
+            attachment_path = os.path.abspath(row['Attachment'])
         # TÌM NÚT MESSAGE
         try:
             msg_btn = WebDriverWait(driver, 10).until(
@@ -389,10 +399,16 @@ def send_message_optimized(driver, row):
         
         # ATTACHMENT (NẾU CÓ)
         if attachment_path and os.path.exists(attachment_path):
-            attach_input = driver.find_element(By.CLASS_NAME, "msg-form__attachment-upload-input")
-            attach_input.send_keys(attachment_path)
-            random_delay(3, 5)
-        
+            try:
+                attach_input = driver.find_element(By.CLASS_NAME, "msg-form__attachment-upload-input")
+                attach_input.send_keys(attachment_path)
+                print(f"INFO: Đã đính kèm file: {row['Attachment']}")
+                random_delay(3, 5)
+            except Exception as e:
+                print(f"WARNING: Có lỗi khi đính kèm nhưng vẫn sẽ gửi tin: {e}")
+        else:
+            if attachment_path:
+                  print(f"WARNING: Không tìm thấy file {attachment_path}, bỏ qua đính kèm.")
         # GỬI
         send_btn = driver.find_element(By.CLASS_NAME, BUTTON_SEND_CLASS)
         
@@ -409,61 +425,81 @@ def send_message_optimized(driver, row):
 """# **THỰC HIỆN GỬI TIN NHẮN**"""
 
 def main_mess():
-    """# **THỰC HIỆN ĐĂNG NHẬP**"""
-
-    # username = os.getenv("LINKEDIN_USERNAME")
-    # password = os.getenv("LINKEDIN_PASSWORD")
-
+    """Luồng chính: Ưu tiên Cookie -> Login Manual -> Gửi tin nhắn"""
     driver = get_driver()
-    #login(driver, username, password)
-    login_with_cookie(driver=driver)
-    send_count = 0
     
-    # DUYỆT QUA TỪNG PROFILE VÀ GỬI TIN NHẮN.
-    for index, row in df.iterrows():
-        if send_count >= MAX_MESSAGES_PER_DAY:
-            print("Đã đạt giới hạn 15 người/ngày")
-            break
-        profile_link = row['Link']
-        print(profile_link, end=" ")
-        # KIỂM TRA DỮ LIỆU.
-        datum = check_datum(row)
-        if isinstance(datum, str):
-            status = datum
-        else:
+    # THỰC HIỆN ĐĂNG NHẬP
+    # Thử bằng cookie trước
+    logged_in = login_with_cookie(driver)
+    
+    # Nếu cookie thất bại, thử login bằng username/password
+    if not logged_in:
+        print("INFO: Chuyển sang đăng nhập bằng Username/Password...")
+        username = os.getenv("LINKEDIN_USERNAME")
+        password = os.getenv("LINKEDIN_PASSWORD")
+        if username and password:
             try:
-                driver.get(profile_link)
-                random_delay(5,10) #tránh bị LinkedIn quét bot
-                # GỬI TIN NHẮN.
-                #status = send_message(driver, profile_link, datum)
-                status = send_message_optimized(driver, row)
-                #df.at[index, 'Status'] = status
-                
-                if status == "SUCCESS":
-                    send_count += 1
-                    status = "MESSAGE_SENT"
-                    print(f"Gửi thành công đến {row['Name']} - {send_count}/15")
-                
+                login(driver, username, password)
+                logged_in = True
             except Exception as e:
-                status = f"ERROR: {str(e)}"
-                print(status)
+                print(f"CRITICAL: Đăng nhập thủ công thất bại: {e}")
+        else:
+            print("CRITICAL: Thiếu thông tin LINKEDIN_USERNAME/PASSWORD trong .env")
+
+    # Nếu đăng nhập thành công (bằng bất cứ cách nào) thì mới chạy tiếp
+    if logged_in:
+        send_count = 0
+        
+        for index, row in df.iterrows():
+            if send_count >= MAX_MESSAGES_PER_DAY:
+                print(f"INFO: Đã đạt giới hạn {MAX_MESSAGES_PER_DAY} người/ngày")
+                break
                 
-                # capture_full_page_screenshot(driver)
-                #display_screenshot(driver)
-        # LƯU TRẠNG THÁI.
-        df.at[index, 'Status'] = status
-        print(f"Đã lưu trạng thái {status} cho {row['Status']}")
-        if send_count < MAX_MESSAGES_PER_DAY:
-            random_delay(15, 20)
-    # CẬP NHẬT TRẠNG THÁI LÊN GOOGLE SHEETS.
-    # try:
-    #     updated_values = [df.columns.tolist()] + df.values.tolist()
-    #     #sheet.update(RANGE_NAME, updated_values)
-    #     sheet.update(updated_values)
-    #     print("\nINFO: Đã cập nhật trạng thái lên Google Sheets.")
-    # except Exception as e:
-    #     print(f"CRITICAL ERROR: Không thể cập nhật Google Sheets: {e}")
+            profile_link = row['Link']
+            print(f"Processing: {profile_link}")
+            
+            datum = check_datum(row)
+            if isinstance(datum, str):
+                status = datum
+            else:
+                try:
+                    driver.get(profile_link)
+                    random_delay(5, 10) # Tránh bị LinkedIn quét bot
+                    
+                    status = send_message_optimized(driver, row)
+                    
+                    if status == "SUCCESS":
+                        send_count += 1
+                        status = "MESSAGE_SENT"
+                        print(f"-> Gửi thành công đến {row['Name']} ({send_count}/{MAX_MESSAGES_PER_DAY})")
+                    
+                except Exception as e:
+                    status = f"ERROR: {str(e)}"
+                    print(status)
+
+            # Cập nhật trạng thái vào DataFrame
+            df.at[index, 'Status'] = status
+            
+            # Nghỉ giữa các lần gửi để tránh bị khóa account
+            if send_count < MAX_MESSAGES_PER_DAY:
+                random_delay(15, 25)
+    
+    else:
+        print("CRITICAL: Không thể tiến hành gửi tin nhắn vì đăng nhập thất bại.")
+    #CẬP NHẬT TRẠNG THÁI LÊN GOOGLE SHEETS.
+    try:
+        status_list = df[['Status']].values.tolist()
+        start_row = 3
+        end_row = start_row + len(status_list) - 1
+        status_range = f"C{start_row}:C{end_row}"
+        #updated_values = [df.columns.tolist()] + df.values.tolist()
+        #sheet.update(RANGE_NAME, updated_values)
+        sheet.update(status_range, status_list)
+        print("\nINFO: Đã cập nhật trạng thái lên Google Sheets.")
+    except Exception as e:
+        print(f"CRITICAL ERROR: Không thể cập nhật Google Sheets: {e}")
     
     """# **KẾT THÚC CHƯƠNG TRÌNH**"""
     driver.quit()
+    print("ĐÃ THOÁT")
 
