@@ -473,8 +473,8 @@ def main_connect():
             if 'STATUS' not in df.columns:
                 df['STATUS'] = ''
             df.at[index, 'STATUS'] = status
-        else:
-            print("CRITICAL: Không thể tiến hành gửi connect vì đăng nhập thất bại.")
+    else:
+        print("CRITICAL: Không thể tiến hành gửi connect vì đăng nhập thất bại.")
 
     #UPDATE GOOGLE SHEET DATA.
     updated_values = [df.columns.tolist()] + df.values.tolist()
