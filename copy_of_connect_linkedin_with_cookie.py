@@ -493,7 +493,7 @@ def check_connection(driver: webdriver.Chrome, email: str, note: str = None):
 
         # CHECK CONNECTED STATUS.
         if check_status(driver, STATUS_MESSAGE, "Message", "Follow", "Following"):
-            status = check_status_in_more()
+            status = check_status_in_more(driver)
             if status == "UNCONNECTED":
                 status = send_connection(driver, MORE_UNCONNECT)  # Gửi kết nối không có ghi chú
             print(f"STATUS: {status}")
@@ -504,99 +504,102 @@ def check_connection(driver: webdriver.Chrome, email: str, note: str = None):
         return "ERROR: UNKNOWN"
 
 def main_connect():
+    # 1. ĐỌC DỮ LIỆU ĐẢM BẢO KHÔNG THIẾU DÒNG/CỘT
+    result = sheet.values().get(spreadsheetId=SPREADSHEET_ID, range=RANGE_NAME).execute()
+    values = result.get('values', [])
+    
+    if not values:
+        print("ERROR: Không có dữ liệu trong Sheet")
+        return
+
+    # Đảm bảo tất cả các dòng có số cột bằng với header
+    headers = values[0]
+    data = []
+    for row in values[1:]:
+        # Làm đầy các cột thiếu bằng chuỗi rỗng
+        padded_row = row + [""] * (len(headers) - len(row))
+        data.append(padded_row)
+    
+    df = pd.DataFrame(data, columns=headers)
+
+    # 2. KHỞI TẠO DRIVER & ĐĂNG NHẬP
+    driver = get_driver()
     COL_DROPDOWN = "Trạng thái kết nối (đôi khi nút Connect nằm trong nút More)"
     COL_STATUS = "STATUS"
     
-    driver = get_driver()
-    #driver = get_driver_browerless()
-    # """# **THỰC HIỆN ĐĂNG NHẬP**"""
-    # # Thử bằng cookie trước
-    # logged_in = login_with_cookie(driver=driver)
-    # if not logged_in:
-    #     print("INFO: Chuyển sang đăng nhập bằng Username/Password...")
-    #     username = os.getenv("LINKEDIN_USERNAME")
-    #     password = os.getenv("LINKEDIN_PASSWORD")
-    #     if username and password:
-    #         try:
-    #             login(driver, username, password)
-    #             logged_in = True
-    #         except Exception as e:
-    #             print(f"CRITICAL: Đăng nhập thủ công thất bại: {e}")
-    #     else:
-    #         print("CRITICAL: Thiếu thông tin LINKEDIN_USERNAME/PASSWORD trong .env")
-    # if logged_in:
-    #     time.sleep(5)
-    #     print(driver.current_url)
-    #     print(driver.title)
-    #     # """# **THỰC HIỆN GỬI KẾT NỐI**"""
-    #     # for index, row in df.iterrows():
-    #     #     # GO TO PROFILE LINK.
-    #     #     profile_link = row['Linkedin'] # Corrected column name from 'Link' to 'Linkedin'
-    #     #     print(f"Visiting profile: {profile_link}", end=" ")
-    #     #     driver.get(profile_link)
-    #     #     #display_full_screenshot(driver)
-    #     #     status = ""
-    #     #     # Đợi trang tải đầy đủ trước khi kiểm tra kết nối
-    #     #     try:
-    #     #         WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, STATUS_CONNECT)))
-    #     #         # CHECK CONNECTION AND SEND WITHOUT NOTE.
-    #     #         status = check_connection(driver, row["Email để điền khi gặp câu hỏi trog lúc connect"])  # Không gửi ghi chú
-    #     #     except:
-    #     #         status = "CONNECTED"
-
-    #     #     # Ensure the 'STATUS' column exists before trying to assign a value
-    #     #     if 'STATUS' not in df.columns:
-    #     #         df['STATUS'] = ''
-    #     #     df.at[index, 'STATUS'] = status
-    # else:
-    #     print("CRITICAL: Không thể tiến hành gửi connect vì đăng nhập thất bại.")
     username = os.getenv("LINKEDIN_USERNAME")
     password = os.getenv("LINKEDIN_PASSWORD")
     login(driver, username, password)
-    """# **THỰC HIỆN GỬI KẾT NỐI**"""
+
     send_count = 0
+    MAX_LIMIT = 15
+
+    # 3. VÒNG LẶP XỬ LÝ
     for index, row in df.iterrows():
-        if send_count >= MAX_CONNECTIONS_PER_DAY:
-            print(f"INFO: Đã đạt giới hạn {MAX_CONNECTIONS_PER_DAY} người/ngày")
+        if send_count >= MAX_LIMIT:
             break
         
-        # Lấy giá trị hiện tại của các cột trạng thái
-        current_dropdown = str(row.get(COL_DROPDOWN, "")).strip()
-        current_status_text = str(row.get(COL_STATUS, "")).strip()
-        
-        if current_dropdown != "" or current_status_text in ["CONNECTED", "PENDING"]:
-            print(f"⏭️ Bỏ qua dòng {index + 2}: Đã có trạng thái hoặc đã kết nối.")
+        # Làm sạch dữ liệu để tránh lỗi khoảng trắng
+        current_dropdown = str(row.get(COL_DROPDOWN, "")).strip().lower()
+        current_status_text = str(row.get(COL_STATUS, "")).strip().upper()
+        profile_link = str(row.get('Linkedin', "")).strip()
+
+        # Kiểm tra nếu dòng này rỗng hoàn toàn (không có link) thì bỏ qua
+        if not profile_link or "linkedin.com" not in profile_link:
             continue
-        # GO TO PROFILE LINK.
-        profile_link = row['Linkedin'] # Corrected column name from 'Link' to 'Linkedin'
-        print(f"Visiting profile: {profile_link}", end=" ")
-        driver.get(profile_link)
-        #display_full_screenshot(driver)
-        status = ""
-        # Đợi trang tải đầy đủ trước khi kiểm tra kết nối
+
+        # LOGIC SKIP: Chỉ chạy nếu chưa gửi connect và chưa là bạn bè
+        # Chấp nhận các ô trống hoặc giá trị nan
+        is_processed = current_dropdown != "" and current_dropdown != "nan"
+        is_connected = current_status_text in ["CONNECTED", "PENDING", "SUCCESS"]
+
+        if is_processed or is_connected:
+            print(f"⏭️ Bỏ qua dòng {index + 2}: {profile_link} (Trạng thái: {current_dropdown})")
+            continue
+
+        # THỰC HIỆN KẾT NỐI
+        print(f"🚀 Đang xử lý dòng {index + 2}: {profile_link}")
         try:
-            WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, STATUS_CONNECT)))
-            # CHECK CONNECTION AND SEND WITHOUT NOTE.
-            status = check_connection(driver, row["Email để điền khi gặp câu hỏi trog lúc connect"])  # Không gửi ghi chú
-        except:
-            status = "EXCEPTION: CONNECTED"
+            driver.get(profile_link)
+            time.sleep(random.uniform(5, 8))
+            
+            # Kiểm tra và gửi connect
+            email_to_fill = row.get("Email để điền khi gặp câu hỏi trog lúc connect", "")
+            status = check_connection(driver, email_to_fill)
+            
+            # Cập nhật DataFrame
+            df.at[index, COL_STATUS] = status
+            if status in ["SUCCESS", "PENDING", "SUCCESS: CONNECT WITHOUT NOTE!"]:
+                df.at[index, COL_DROPDOWN] = "Đã gửi connect"
+                send_count += 1
+            
+            # Nghỉ để tránh bị quét bot
+            time.sleep(random.uniform(15, 25))
+            
+        except Exception as e:
+            print(f"❌ Lỗi dòng {index + 2}: {e}")
+            df.at[index, COL_STATUS] = "ERROR"
 
-        # Ensure the 'STATUS' column exists before trying to assign a value
-        if 'STATUS' not in df.columns:
-            df['STATUS'] = ''
-        df.at[index, 'STATUS'] = status
-        # Nghỉ giữa các lần gửi để tránh bị khóa account
-        if send_count < MAX_CONNECTIONS_PER_DAY:
-            time.sleep(random.uniform(10, 15))
-    #UPDATE GOOGLE SHEET DATA.
-    updated_values = [df.columns.tolist()] + df.values.tolist()
-    body = {'values': updated_values}
-    print(service)
-    print(type(service))
-    service.spreadsheets().values().update(
-        spreadsheetId=SPREADSHEET_ID, range=RANGE_NAME,
-        valueInputOption='RAW', body=body).execute()
-    """# **KẾT THÚC CHƯƠNG TRÌNH**"""
+    # 4. CẬP NHẬT LẠI GOOGLE SHEETS
+    print("📤 Đang đồng bộ dữ liệu lên Sheets...")
+    
+    # Xử lý giá trị NaN trước khi convert thành list
+    # fillna("") sẽ thay thế toàn bộ ô rỗng (NaN) bằng chuỗi rỗng hợp lệ với JSON
+    df_to_upload = df.fillna("") 
+    
+    # Chuyển DataFrame ngược lại thành List of Lists, bao gồm cả Header
+    final_values = [df_to_upload.columns.tolist()] + df_to_upload.values.tolist()
+    
+    try:
+        service.spreadsheets().values().update(
+            spreadsheetId=SPREADSHEET_ID, 
+            range=RANGE_NAME,
+            valueInputOption='RAW', 
+            body={'values': final_values} # Bây giờ payload đã là JSON hợp lệ
+        ).execute()
+        print("✅ Đã cập nhật xong!")
+    except Exception as e:
+        print(f"❌ Lỗi cập nhật Sheets: {e}")
+
     driver.quit()
-    print("ĐÃ THOÁT")
-
+    print("Đã thoát")
