@@ -37,7 +37,30 @@ def human_type(element, text):
         time.sleep(random.uniform(0.1, 0.3))
 def random_delay(min_s=2, max_s=5):
     time.sleep(random.uniform(min_s, max_s))
-
+def get_data_with_links(sheet):
+    # Lấy toàn bộ dữ liệu dưới dạng công thức để thấy được =HYPERLINK(...)
+    data_formula = sheet.get_all_values(value_render_option='FORMULA')
+    headers = data_formula[0]
+    rows = data_formula[1:]
+    
+    processed_data = []
+    for row in rows:
+        row_dict = dict(zip(headers, row))
+        attachment_val = str(row_dict.get('Attachment', ''))
+        
+        # Tìm tất cả các link trong ô (trường hợp có nhiều link phân cách bằng dấu phẩy)
+        # Regex tìm nội dung trong ngoặc kép đầu tiên của hàm HYPERLINK
+        links = re.findall(r'HYPERLINK\("([^"]+)"', attachment_val)
+        names = re.findall(r'HYPERLINK\("[^"]+",\s*"([^"]+)"', attachment_val)
+        
+        if links:
+            # Gộp lại thành định dạng: Name: Link
+            formatted_attachments = [f"{n}: {l}" for n, l in zip(names, links)]
+            row_dict['Attachment'] = ", ".join(formatted_attachments)
+        
+        processed_data.append(row_dict)
+    
+    return pd.DataFrame(processed_data)
 def save_cookies(driver):
     """Lưu cookies vào file"""
     with open(COOKIES_FILE, "wb") as cookies_file:
@@ -437,13 +460,19 @@ def send_message_optimized(driver, row):
     try:
         name = row['Name']
         message_template = row['Message'].replace("{{Name}}", name)
-        attachment_path = None
-        if row.get('Attachment') and str(row.get('Attachment')).strip()!= "":
-            attachment_path = os.path.abspath(row['Attachment'])
+        attachment = str(row.get('Attachment', "")).strip()
+        if attachment and attachment.lower() != "nan":
+            # Nối link vào cuối tin nhắn theo định dạng rõ ràng
+            full_message = f"{message_template}\n\nFile đính kèm: {attachment}"
+        else:
+            full_message = message_template
+        # attachment_path = None
+        # if row.get('Attachment') and str(row.get('Attachment')).strip()!= "":
+        #     attachment_path = os.path.abspath(row['Attachment'])
         # TÌM NÚT MESSAGE
         try:
             msg_btn = WebDriverWait(driver, 10).until(
-               EC.element_to_be_clickable((By.XPATH, "//button[contains(@aria-label, 'Send a message')]"))
+               EC.element_to_be_clickable((By.XPATH, BUTTON_MESSAGE))
             )
             msg_btn.click()
         except:
@@ -452,23 +481,32 @@ def send_message_optimized(driver, row):
         
         # NHẬP NỘI DUNG
         msg_box = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located(By.CLASS_NAME, FIELD_MESSAGE_CLASS)
-        )
+            EC.presence_of_element_located((By.CLASS_NAME, FIELD_MESSAGE_CLASS)))
         msg_box.click()
-        human_type(msg_box, message_template)
+        #human_type(msg_box, message_template)
+        # msg_box.send_keys(full_message)
+        #Nhập nội dung dùng JavaScript để hỗ trợ Link dài
+        driver.execute_script("""
+            var el = arguments[0];
+            var text = arguments[1];
+            el.focus();
+            document.execCommand('insertText', false, text);
+        """, msg_box, full_message)
+        time.sleep(2)
         
-        # ATTACHMENT (NẾU CÓ)
-        if attachment_path and os.path.exists(attachment_path):
-            try:
-                attach_input = driver.find_element(By.CLASS_NAME, "msg-form__attachment-upload-input")
-                attach_input.send_keys(attachment_path)
-                print(f"INFO: Đã đính kèm file: {row['Attachment']}")
-                random_delay(3, 5)
-            except Exception as e:
-                print(f"WARNING: Có lỗi khi đính kèm nhưng vẫn sẽ gửi tin: {e}")
-        else:
-            if attachment_path:
-                  print(f"WARNING: Không tìm thấy file {attachment_path}, bỏ qua đính kèm.")
+        # # ATTACHMENT (NẾU CÓ)
+        # if attachment_path and os.path.exists(attachment_path):
+        #     try:
+        #         attach_input = driver.find_element(By.CLASS_NAME, "msg-form__attachment-upload-input")
+        #         attach_input.send_keys(attachment_path)
+        #         print(f"INFO: Đã đính kèm file: {row['Attachment']}")
+        #         random_delay(3, 5)
+        #     except Exception as e:
+        #         print(f"WARNING: Có lỗi khi đính kèm nhưng vẫn sẽ gửi tin: {e}")
+        # else:
+        #     if attachment_path:
+        #           print(f"WARNING: Không tìm thấy file {attachment_path}, bỏ qua đính kèm.")
+        
         # GỬI
         send_btn = driver.find_element(By.CLASS_NAME, BUTTON_SEND_CLASS)
         
