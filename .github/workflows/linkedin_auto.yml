@@ -21,6 +21,15 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      # Khôi phục cookie từ lần chạy trước
+      - name: Restore LinkedIn Cookie
+        uses: actions/cache@v3
+        with:
+          path: linkedin_cookies.pkl
+          key: ${{ runner.os }}-linkedin-session-${{ github.run_id }}
+          restore-keys: |
+            ${{ runner.os }}-linkedin-session-
+
       - name: Run Connect Script
         if: github.event.action == 'run-linkedin-connect'
         env:
@@ -41,3 +50,11 @@ jobs:
           LINKEDIN_PASSWORD: ${{ secrets.LINKEDIN_PASSWORD }}
           LINKEDIN_COOKIE: ${{ secrets.LINKEDIN_COOKIE }}
         run: python -c "from copy_of_message_linkedin_with_cookie import main_mess; main_mess()"
+
+      # Lưu lại cookie mới nhất sau khi script chạy xong
+      - name: Save LinkedIn Cookie
+        if: always()
+        uses: actions/cache@v3
+        with:
+          path: linkedin_cookies.pkl
+          key: ${{ runner.os }}-linkedin-session-${{ github.run_id }}

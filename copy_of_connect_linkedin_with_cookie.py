@@ -47,13 +47,19 @@ load_dotenv()
 # --- CONFIG ---
 COOKIES_FILE = 'linkedin_cookies.pkl'
 CREDENTIALS_FILE = 'linkedin_credentials.pkl'
+BROWSERLESS_API_KEY = os.getenv("BROWSERLESS_API_KEY")
+MAX_CONNECTIONS_PER_DAY = 15
 
 SPREADSHEET_ID = os.getenv('SPREADSHEET_ID')
 RANGE_NAME = os.getenv('RANGE_NAME')
 GOOGLE_CREDS = os.getenv('GOOGLE_APPLICATION_CRED')
 
 """# **HÀM HỖ TRỢ**"""
-
+def human_type(element, text):
+    """Gõ phím như người thật với độ trễ ngẫu nhiên"""
+    for char in text:
+        element.send_keys(char)
+        time.sleep(random.uniform(0.1, 0.3))
 # # def display_screenshot(driver: webdriver.Chrome, file_name: str = 'screenshot.png'):
 # #     driver.save_screenshot(file_name)
 # #     time.sleep(5)
@@ -102,25 +108,40 @@ df = df.fillna('')
 def get_driver():
     options = webdriver.ChromeOptions()
     
+    # 1. Định nghĩa một User-Agent nhất quán (Tránh khai báo 2 lần)
     user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     options.add_argument(f"user-agent={user_agent}")
 
+    # 2. Các thiết lập cơ bản cho môi trường Linux/Docker (GitHub Actions)
     options.add_argument('--no-sandbox')
     options.add_argument("--disable-dev-shm-usage")
-    options.add_argument('--headless=new')
     options.add_argument('--disable-gpu')
-    options.add_argument("--window-size=1920, 1200")
-    options.add_argument('--disable-dev-shm-usage')
-    # Giả lập User-Agent thật để tránh bị phát hiện là Bot
-    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36")
+    options.add_argument('--headless=new')
+    options.add_argument("--window-size=1920,1200")
+    
+    # 3. CHỐNG PHÁT HIỆN BOT (Stealth Mode)
+    # Loại bỏ cờ 'nút điều khiển tự động'
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option('useAutomationExtension', False)
+    # Vô hiệu hóa tính năng AutomationControlled của Blink
     options.add_argument("--disable-blink-features=AutomationControlled")
-    options.add_experimental_option("useAutomationExtension", False)
-
+    
+    # Thêm các cờ để trình duyệt giống người dùng thật hơn
+    options.add_argument("--disable-infobars")
+    options.add_argument("--disable-notifications")
+    
+    # Khởi tạo driver
     driver = webdriver.Chrome(options=options)
-    # Ẩn thuộc tính webdriver của trình duyệt
-    driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+    
+    # 4. Ẩn thuộc tính navigator.webdriver bằng Script thực thi ngay khi load trang
+    driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
+        "source": """
+            Object.defineProperty(navigator, 'webdriver', {
+                get: () => undefined
+            })
+        """
+    })
+    
     return driver
 
 # Use ChromeDriverManager to automatically get the driver executable path #Tối ưu tự tìm ví trí chromedriver
@@ -147,6 +168,20 @@ def get_driver():
 #         time.sleep(3)
 #         return True  # Đăng nhập thành công bằng cookies
 #     return False
+def save_cookies(driver):
+    """Lưu cookies vào file"""
+    with open(COOKIES_FILE, "wb") as cookies_file:
+        pickle.dump(driver.get_cookies(), cookies_file)
+    print("INFO: COOKIES SAVED!")
+
+def load_cookies(driver: webdriver.Chrome, file_name: str):
+    """Đọc cookies từ file pickle và thêm vào browser"""
+    if os.path.exists(file_name):
+        with open(file_name, 'rb') as f:
+            cookies = pickle.load(f)
+            for cookie in cookies:
+                driver.add_cookie(cookie)
+                
 def login_with_cookie(driver):
     """Xử lý đăng nhập bằng Cookie li_at từ .env"""
     print("INFO: Đang thử đăng nhập bằng Cookie...")
@@ -199,12 +234,12 @@ def login_with_cookie(driver):
 #             for cookie in cookies:
 #                 driver.add_cookie(cookie)
 
-def load_credentials():
-    """Tải thông tin đăng nhập từ file"""
-    if os.path.exists(CREDENTIALS_FILE):
-        with open(CREDENTIALS_FILE, "rb") as f:
-            return pickle.load(f)
-    return None
+# def load_credentials():
+#     """Tải thông tin đăng nhập từ file"""
+#     if os.path.exists(CREDENTIALS_FILE):
+#         with open(CREDENTIALS_FILE, "rb") as f:
+#             return pickle.load(f)
+#     return None
 
 def save_credentials(username, password):
     """Lưu thông tin đăng nhập vào file"""
@@ -241,34 +276,67 @@ def handle_code_verification(driver: webdriver.Chrome):
     except:
         print("INFO: NO VERIFICATION DETECTED!")
 
-def login(driver: webdriver.Chrome, username, password):
-    try:
-        driver.get("https://www.linkedin.com/login")
-        # display_screenshot(driver)
-        #capture_full_page_screenshot(driver)
-        # WAIT FOR LOADING PAGE.
-        XPATH_USERNAME, XPATH_PASSWORD = '//*[@id="username"]', '//*[@id="password"]'
-        username_field = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, XPATH_USERNAME)))
-        password_field = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, XPATH_PASSWORD)))
-        login_button = driver.find_element(By.XPATH, "//button[normalize-space(text())='Sign in']")
-        # ENTER USERNAME.
-        username_field.send_keys(username)
-        time.sleep(2)
-        # ENTER PASSWORD.
-        password_field.send_keys(password)
-        time.sleep(2)
-        # CLICK LOGIN BUTTON.
-        login_button.click()
-    except TimeoutException:
-        raise Exception("ERROR: ELEMENT NOT FOUND!")
-    except:
-        raise Exception("ERROR: LOGIN FAILED!")
-    # CHECK VERIFY.
-    handle_code_verification(driver)
-    handle_cookie_acceptance(driver)
-    
+def login(driver: webdriver.Chrome, username: str, password: str):
+    """Đăng nhập vào LinkedIn với username và password mới nếu có sự thay đổi"""
+    XPATH_USERNAME = '//*[@id="username"]'
+    XPATH_PASSWORD = '//*[@id="password"]'
+    XPATH_LOGIN_BUTTON = '//button[contains(@class, "btn__primary--large") and @aria-label="Sign in"]'
+
+    driver.get("https://www.linkedin.com/login")
+    time.sleep(2)  # Ensure the page is fully loaded
+
+    # Kiểm tra nếu có cookies và kiểm tra xem username, password có thay đổi không
+    #credentials = load_credentials()
+
+    if os.path.exists(COOKIES_FILE): #and credentials:
+        # Kiểm tra nếu username hoặc password đã thay đổi
+        #if credentials['username'] == username and credentials['password'] == password:
+            # Tải cookies và thử đăng nhập
+        load_cookies(driver, COOKIES_FILE)
+        driver.get("https://www.linkedin.com/feed")
+        time.sleep(3)
+
+        # Kiểm tra xem đã đăng nhập chưa bằng cách xem có biểu tượng người dùng không
+        try:
+            user_icon = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.CLASS_NAME, 'global-nav__me-photo')))
+            print("INFO: Logged in using cookies!")
+            driver.save_screenshot("cookie-login.png")
+            # save user_icon
+            #user_icon.screenshot("user_icon.png")
+            # display_screenshot(driver, "status.png")
+            return
+        except:
+            print("INFO: Cookies không hợp lệ, thử đăng nhập lại...")
+            driver.save_screenshot("cookie-login.png")
+
+    # Nếu thông tin đăng nhập đã thay đổi hoặc không có cookies, đăng nhập thủ công
+    driver.get("https://www.linkedin.com/login")
+    username_field = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, XPATH_USERNAME)))
+    password_field = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, XPATH_PASSWORD)))
+    login_button = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, XPATH_LOGIN_BUTTON)))
+
+    human_type(username_field, username)
+    #username_field.send_keys(username)
+    time.sleep(2)
+    human_type(password_field, password)
+    #password_field.send_keys(password)
+    time.sleep(2)
+    login_button.click()
+
     time.sleep(5)
-    #display_screenshot(driver)
+
+    # Lưu cookies và thông tin đăng nhập sau khi đăng nhập thành công
+    save_cookies(driver)
+    #save_credentials(username, password)
+    print("INFO: Đăng nhập thành công và đã lưu cookies, thông tin đăng nhập!")
+    driver.save_screenshot("post-login.png")
+    # user_icon = WebDriverWait(driver, 10).until(
+    #                 EC.presence_of_element_located((By.CLASS_NAME, 'global-nav__me-photo')))
+    # # save user_icon
+    # user_icon.screenshot("user_icon.png")
+    # display_screenshot(driver, "status.png")
+    # display_full_screenshot(driver)
 
 
 """# **XPATH**"""
@@ -436,46 +504,90 @@ def check_connection(driver: webdriver.Chrome, email: str, note: str = None):
         return "ERROR: UNKNOWN"
 
 def main_connect():
+    COL_DROPDOWN = "Trạng thái kết nối (đôi khi nút Connect nằm trong nút More)"
+    COL_STATUS = "STATUS"
+    
     driver = get_driver()
-    """# **THỰC HIỆN ĐĂNG NHẬP**"""
-    # Thử bằng cookie trước
-    logged_in = login_with_cookie(driver=driver)
-    if not logged_in:
-        print("INFO: Chuyển sang đăng nhập bằng Username/Password...")
-        username = os.getenv("LINKEDIN_USERNAME")
-        password = os.getenv("LINKEDIN_PASSWORD")
-        if username and password:
-            try:
-                login(driver, username, password)
-                logged_in = True
-            except Exception as e:
-                print(f"CRITICAL: Đăng nhập thủ công thất bại: {e}")
-        else:
-            print("CRITICAL: Thiếu thông tin LINKEDIN_USERNAME/PASSWORD trong .env")
-    if logged_in:
-        """# **THỰC HIỆN GỬI KẾT NỐI**"""
-        for index, row in df.iterrows():
-            # GO TO PROFILE LINK.
-            profile_link = row['Linkedin'] # Corrected column name from 'Link' to 'Linkedin'
-            print(f"Visiting profile: {profile_link}", end=" ")
-            driver.get(profile_link)
-            #display_full_screenshot(driver)
-            status = ""
-            # Đợi trang tải đầy đủ trước khi kiểm tra kết nối
-            try:
-                WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, STATUS_CONNECT)))
-                # CHECK CONNECTION AND SEND WITHOUT NOTE.
-                status = check_connection(driver, row["Email để điền khi gặp câu hỏi trog lúc connect"])  # Không gửi ghi chú
-            except:
-                status = "CONNECTED"
+    #driver = get_driver_browerless()
+    # """# **THỰC HIỆN ĐĂNG NHẬP**"""
+    # # Thử bằng cookie trước
+    # logged_in = login_with_cookie(driver=driver)
+    # if not logged_in:
+    #     print("INFO: Chuyển sang đăng nhập bằng Username/Password...")
+    #     username = os.getenv("LINKEDIN_USERNAME")
+    #     password = os.getenv("LINKEDIN_PASSWORD")
+    #     if username and password:
+    #         try:
+    #             login(driver, username, password)
+    #             logged_in = True
+    #         except Exception as e:
+    #             print(f"CRITICAL: Đăng nhập thủ công thất bại: {e}")
+    #     else:
+    #         print("CRITICAL: Thiếu thông tin LINKEDIN_USERNAME/PASSWORD trong .env")
+    # if logged_in:
+    #     time.sleep(5)
+    #     print(driver.current_url)
+    #     print(driver.title)
+    #     # """# **THỰC HIỆN GỬI KẾT NỐI**"""
+    #     # for index, row in df.iterrows():
+    #     #     # GO TO PROFILE LINK.
+    #     #     profile_link = row['Linkedin'] # Corrected column name from 'Link' to 'Linkedin'
+    #     #     print(f"Visiting profile: {profile_link}", end=" ")
+    #     #     driver.get(profile_link)
+    #     #     #display_full_screenshot(driver)
+    #     #     status = ""
+    #     #     # Đợi trang tải đầy đủ trước khi kiểm tra kết nối
+    #     #     try:
+    #     #         WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, STATUS_CONNECT)))
+    #     #         # CHECK CONNECTION AND SEND WITHOUT NOTE.
+    #     #         status = check_connection(driver, row["Email để điền khi gặp câu hỏi trog lúc connect"])  # Không gửi ghi chú
+    #     #     except:
+    #     #         status = "CONNECTED"
 
-            # Ensure the 'STATUS' column exists before trying to assign a value
-            if 'STATUS' not in df.columns:
-                df['STATUS'] = ''
-            df.at[index, 'STATUS'] = status
-    else:
-        print("CRITICAL: Không thể tiến hành gửi connect vì đăng nhập thất bại.")
+    #     #     # Ensure the 'STATUS' column exists before trying to assign a value
+    #     #     if 'STATUS' not in df.columns:
+    #     #         df['STATUS'] = ''
+    #     #     df.at[index, 'STATUS'] = status
+    # else:
+    #     print("CRITICAL: Không thể tiến hành gửi connect vì đăng nhập thất bại.")
+    username = os.getenv("LINKEDIN_USERNAME")
+    password = os.getenv("LINKEDIN_PASSWORD")
+    login(driver, username, password)
+    """# **THỰC HIỆN GỬI KẾT NỐI**"""
+    send_count = 0
+    for index, row in df.iterrows():
+        if send_count >= MAX_CONNECTIONS_PER_DAY:
+            print(f"INFO: Đã đạt giới hạn {MAX_CONNECTIONS_PER_DAY} người/ngày")
+            break
+        
+        # Lấy giá trị hiện tại của các cột trạng thái
+        current_dropdown = str(row.get(COL_DROPDOWN, "")).strip()
+        current_status_text = str(row.get(COL_STATUS, "")).strip()
+        
+        if current_dropdown != "" or current_status_text in ["CONNECTED", "PENDING"]:
+            print(f"⏭️ Bỏ qua dòng {index + 2}: Đã có trạng thái hoặc đã kết nối.")
+            continue
+        # GO TO PROFILE LINK.
+        profile_link = row['Linkedin'] # Corrected column name from 'Link' to 'Linkedin'
+        print(f"Visiting profile: {profile_link}", end=" ")
+        driver.get(profile_link)
+        #display_full_screenshot(driver)
+        status = ""
+        # Đợi trang tải đầy đủ trước khi kiểm tra kết nối
+        try:
+            WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, STATUS_CONNECT)))
+            # CHECK CONNECTION AND SEND WITHOUT NOTE.
+            status = check_connection(driver, row["Email để điền khi gặp câu hỏi trog lúc connect"])  # Không gửi ghi chú
+        except:
+            status = "EXCEPTION: CONNECTED"
 
+        # Ensure the 'STATUS' column exists before trying to assign a value
+        if 'STATUS' not in df.columns:
+            df['STATUS'] = ''
+        df.at[index, 'STATUS'] = status
+        # Nghỉ giữa các lần gửi để tránh bị khóa account
+        if send_count < MAX_CONNECTIONS_PER_DAY:
+            time.sleep(random.uniform(10, 15))
     #UPDATE GOOGLE SHEET DATA.
     updated_values = [df.columns.tolist()] + df.values.tolist()
     body = {'values': updated_values}
@@ -486,85 +598,5 @@ def main_connect():
         valueInputOption='RAW', body=body).execute()
     """# **KẾT THÚC CHƯƠNG TRÌNH**"""
     driver.quit()
-    print("Đã thoát")
-# def main_connect():
-#     """Hàm này chứa toàn bộ logic cũ của main() nhưng chạy ngầm"""
-#     print("--- BẮT ĐẦU CHẠY SCRIPT NGẦM ---")
-    
-#     # 1. Khởi tạo Service Google Sheets bên trong hàm
-#     try:
-#         current_service = get_gsheet_service()
-#         print("✅ Đã kết nối Google Sheets Service")
-        
-#         # Đọc dữ liệu mới nhất
-#         result = current_service.spreadsheets().values().get(
-#             spreadsheetId=SPREADSHEET_ID, range=RANGE_NAME).execute()
-#         values = result.get('values', [])
-#         if not values:
-#             print("❌ LỖI: Không lấy được dữ liệu từ Sheets")
-#             return
-            
-#         current_df = pd.DataFrame(values[1:], columns=values[0])
-#         print(f"✅ Đã tải DataFrame: {len(current_df)} dòng")
-#     except Exception as e:
-#         print(f"❌ LỖI KHỞI TẠO SHEETS: {str(e)}")
-#         return
-
-#     # 2. Khởi tạo Driver bên trong hàm #Tối ưu nhằm tránh lỗi docker 
-#     local_driver = None
-#     try:
-#         print("🚀 Đang khởi tạo trình duyệt Chrome...")
-#         # Sử dụng đúng options bạn đã định nghĩa ở trên
-#         local_driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-#         print("✅ Trình duyệt đã sẵn sàng")
-
-#         username = os.getenv('LINKEDIN_USERNAME')
-#         password = os.getenv('LINKEDIN_PASSWORD')
-        
-#         print(f"🔑 Đang đăng nhập cho tài khoản: {username}")
-#         login(local_driver, username, password)
-        
-#         # 3. Vòng lặp chính: chỉ gửi connect nếu chưa kết nối, giới hạn 15/ngày #Tối ưu giới hạn
-#         max_send = 15
-#         sent_count = 0
-#         for index, row in current_df.iterrows():
-#             if sent_count >= max_send:
-#                 print(f"Đã gửi kết nối cho {max_send} người. Dừng lại để tuân thủ giới hạn mỗi ngày.")
-#                 break
-#             profile_link = row.get('Linkedin')
-#             if not profile_link:
-#                 continue
-#             print(f"Đang xử lý profile: {profile_link}")
-#             local_driver.get(profile_link)
-#             time.sleep(5)
-#             status = ""
-#             try:
-#                 # Chỉ gửi connect nếu trạng thái là UNCONNECTED
-#                 current_status = check_status_in_more(local_driver)
-#                 if current_status == "UNCONNECTED":
-#                     status = send_connection(local_driver, STATUS_CONNECT)
-#                     sent_count += 1
-#                 else:
-#                     status = current_status if current_status != "UNKNOWN" else "SKIPPED"
-#             except Exception as e:
-#                 status = "ERROR"
-#                 print(f"Lỗi xử lý dòng {index}: {str(e)}")
-#             current_df.at[index, 'STATUS'] = status
-#             print(f"Kết quả dòng {index}: {status}")
-
-#         # 4. Cập nhật lại Sheets
-#         print("📤 Đang gửi dữ liệu cập nhật lên Sheets...")
-#         updated_values = [current_df.columns.tolist()] + current_df.values.tolist()
-#         body = {'values': updated_values}
-#         current_service.spreadsheets().values().update(
-#             spreadsheetId=SPREADSHEET_ID, range=RANGE_NAME,
-#             valueInputOption='RAW', body=body).execute()
-#         print("🎉 HOÀN THÀNH TOÀN BỘ!")
-
-#     except Exception as e:
-#         print(f"💥 LỖI HỆ THỐNG TRONG KHI CHẠY: {str(e)}")
-#     finally:
-#         if local_driver:
-#             local_driver.quit()
-#             print("🔒 Đã đóng trình duyệt.")
+    print("ĐÃ THOÁT")
 

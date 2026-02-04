@@ -23,6 +23,11 @@ load_dotenv()
 """# **CONFIG**"""
 MAX_MESSAGES_PER_DAY = 15
 COOKIES_FILE = 'linkedin_cookies.pkl'
+# Thông tin bảng tính
+SPREADSHEET_ID = os.getenv('SPREADSHEET_MESS_ID')
+SHEET_NAME = 'Sheet1'
+RANGE_NAME = 'A:E'
+GOOGLE_CREDS = os.getenv('GOOGLE_APPLICATION_CRED')
 
 """# **HÀM HỖ TRỢ**"""
 def human_type(element, text):
@@ -32,7 +37,21 @@ def human_type(element, text):
         time.sleep(random.uniform(0.1, 0.3))
 def random_delay(min_s=2, max_s=5):
     time.sleep(random.uniform(min_s, max_s))
-    
+
+def save_cookies(driver):
+    """Lưu cookies vào file"""
+    with open(COOKIES_FILE, "wb") as cookies_file:
+        pickle.dump(driver.get_cookies(), cookies_file)
+    print("INFO: COOKIES SAVED!")
+
+def load_cookies(driver: webdriver.Chrome, file_name: str):
+    """Đọc cookies từ file pickle và thêm vào browser"""
+    if os.path.exists(file_name):
+        with open(file_name, 'rb') as f:
+            cookies = pickle.load(f)
+            for cookie in cookies:
+                driver.add_cookie(cookie)
+                
 # def display_screenshot(driver: webdriver.Chrome, file_name: str = 'screenshot.png'):
 #     driver.save_screenshot(file_name)
 #     time.sleep(5)
@@ -53,12 +72,6 @@ def random_delay(min_s=2, max_s=5):
 #     display(Image(filename=file_name))
 
 """# **KẾT NỐI GOOGLE SHEETS**"""
-
-# Thông tin bảng tính
-SPREADSHEET_ID = os.getenv('SPREADSHEET_MESS_ID')
-SHEET_NAME = 'Sheet1'
-RANGE_NAME = 'A:E'
-GOOGLE_CREDS = os.getenv('GOOGLE_APPLICATION_CRED')
 
 # Xác thực với Google Sheets API
 scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
@@ -81,25 +94,40 @@ df = pd.DataFrame(values[2:], columns=values[1])
 def get_driver():
     options = webdriver.ChromeOptions()
     
+    # 1. Định nghĩa một User-Agent nhất quán (Tránh khai báo 2 lần)
     user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     options.add_argument(f"user-agent={user_agent}")
 
+    # 2. Các thiết lập cơ bản cho môi trường Linux/Docker (GitHub Actions)
     options.add_argument('--no-sandbox')
     options.add_argument("--disable-dev-shm-usage")
-    options.add_argument('--headless=new')
     options.add_argument('--disable-gpu')
-    options.add_argument("--window-size=1920, 1200")
-    options.add_argument('--disable-dev-shm-usage')
-    # Giả lập User-Agent thật để tránh bị phát hiện là Bot
-    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36")
+    options.add_argument('--headless=new')
+    options.add_argument("--window-size=1920,1200")
+    
+    # 3. CHỐNG PHÁT HIỆN BOT (Stealth Mode)
+    # Loại bỏ cờ 'nút điều khiển tự động'
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option('useAutomationExtension', False)
+    # Vô hiệu hóa tính năng AutomationControlled của Blink
     options.add_argument("--disable-blink-features=AutomationControlled")
-    options.add_experimental_option("useAutomationExtension", False)
-
+    
+    # Thêm các cờ để trình duyệt giống người dùng thật hơn
+    options.add_argument("--disable-infobars")
+    options.add_argument("--disable-notifications")
+    
+    # Khởi tạo driver
     driver = webdriver.Chrome(options=options)
-    # Ẩn thuộc tính webdriver của trình duyệt
-    driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+    
+    # 4. Ẩn thuộc tính navigator.webdriver bằng Script thực thi ngay khi load trang
+    driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
+        "source": """
+            Object.defineProperty(navigator, 'webdriver', {
+                get: () => undefined
+            })
+        """
+    })
+    
     return driver
 
 """# **HÀM ĐĂNG NHẬP**"""
@@ -162,34 +190,66 @@ def handle_code_verification(driver: webdriver.Chrome):
     except:
         print("INFO: NO VERIFICATION DETECTED!")
 
-def login(driver: webdriver.Chrome, username, password):
-    try:
-        driver.get("https://www.linkedin.com/login")
-        # display_screenshot(driver)
-        #capture_full_page_screenshot(driver)
-        # WAIT FOR LOADING PAGE.
-        XPATH_USERNAME, XPATH_PASSWORD = '//*[@id="username"]', '//*[@id="password"]'
-        username_field = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, XPATH_USERNAME)))
-        password_field = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, XPATH_PASSWORD)))
-        login_button = driver.find_element(By.XPATH, "//button[normalize-space(text())='Sign in']")
-        # ENTER USERNAME.
-        username_field.send_keys(username)
-        time.sleep(2)
-        # ENTER PASSWORD.
-        password_field.send_keys(password)
-        time.sleep(2)
-        # CLICK LOGIN BUTTON.
-        login_button.click()
-    except TimeoutException:
-        raise Exception("ERROR: ELEMENT NOT FOUND!")
-    except:
-        raise Exception("ERROR: LOGIN FAILED!")
-    # CHECK VERIFY.
-    handle_code_verification(driver)
-    handle_cookie_acceptance(driver)
-    
+def login(driver: webdriver.Chrome, username: str, password: str):
+    """Đăng nhập vào LinkedIn với username và password mới nếu có sự thay đổi"""
+    XPATH_USERNAME = '//*[@id="username"]'
+    XPATH_PASSWORD = '//*[@id="password"]'
+    XPATH_LOGIN_BUTTON = '//button[contains(@class, "btn__primary--large") and @aria-label="Sign in"]'
+
+    driver.get("https://www.linkedin.com/login")
+    time.sleep(2)  # Ensure the page is fully loaded
+
+    # Kiểm tra nếu có cookies và kiểm tra xem username, password có thay đổi không
+    #credentials = load_credentials()
+
+    if os.path.exists(COOKIES_FILE):# and credentials:
+        # Kiểm tra nếu username hoặc password đã thay đổi
+        #if credentials['username'] == username and credentials['password'] == password:
+            # Tải cookies và thử đăng nhập
+        load_cookies(driver, COOKIES_FILE)
+        driver.get("https://www.linkedin.com/feed")
+        time.sleep(3)
+
+        # Kiểm tra xem đã đăng nhập chưa bằng cách xem có biểu tượng người dùng không
+        try:
+            user_icon = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.CLASS_NAME, 'global-nav__me-photo')))
+            print("INFO: Logged in using cookies!")
+            driver.save_screenshot("cookie-login.png")
+            # save user_icon
+            #user_icon.screenshot("user_icon.png")
+            # display_screenshot(driver, "status.png")
+            return
+        except:
+            print("INFO: Cookies không hợp lệ, thử đăng nhập lại...")
+
+    # Nếu thông tin đăng nhập đã thay đổi hoặc không có cookies, đăng nhập thủ công
+    driver.get("https://www.linkedin.com/login")
+    username_field = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, XPATH_USERNAME)))
+    password_field = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, XPATH_PASSWORD)))
+    login_button = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, XPATH_LOGIN_BUTTON)))
+
+    human_type(username_field, username)
+    #username_field.send_keys(username)
+    time.sleep(2)
+    human_type(password_field, password)
+    #password_field.send_keys(password)
+    time.sleep(2)
+    login_button.click()
+
     time.sleep(5)
-    #display_screenshot(driver)
+
+    # Lưu cookies và thông tin đăng nhập sau khi đăng nhập thành công
+    save_cookies(driver)
+    #save_credentials(username, password)
+    print("INFO: Đăng nhập thành công và đã lưu cookies, thông tin đăng nhập!")
+    driver.save_screenshot("post-login.png")
+    # user_icon = WebDriverWait(driver, 10).until(
+    #                 EC.presence_of_element_located((By.CLASS_NAME, 'global-nav__me-photo')))
+    # # save user_icon
+    # user_icon.screenshot("user_icon.png")
+    # display_screenshot(driver, "status.png")
+    # display_full_screenshot(driver)
 
 def login_with_cookie(driver):
     """Xử lý đăng nhập bằng Cookie li_at từ .env"""
@@ -428,64 +488,68 @@ def main_mess():
     """Luồng chính: Ưu tiên Cookie -> Login Manual -> Gửi tin nhắn"""
     driver = get_driver()
     
-    # THỰC HIỆN ĐĂNG NHẬP
-    # Thử bằng cookie trước
-    logged_in = login_with_cookie(driver)
+    # # THỰC HIỆN ĐĂNG NHẬP
+    # # Thử bằng cookie trước
+    # logged_in = login_with_cookie(driver)
     
-    # Nếu cookie thất bại, thử login bằng username/password
-    if not logged_in:
-        print("INFO: Chuyển sang đăng nhập bằng Username/Password...")
-        username = os.getenv("LINKEDIN_USERNAME")
-        password = os.getenv("LINKEDIN_PASSWORD")
-        if username and password:
-            try:
-                login(driver, username, password)
-                logged_in = True
-            except Exception as e:
-                print(f"CRITICAL: Đăng nhập thủ công thất bại: {e}")
-        else:
-            print("CRITICAL: Thiếu thông tin LINKEDIN_USERNAME/PASSWORD trong .env")
+    # # Nếu cookie thất bại, thử login bằng username/password
+    # if not logged_in:
+    #     print("INFO: Chuyển sang đăng nhập bằng Username/Password...")
+    #     username = os.getenv("LINKEDIN_USERNAME")
+    #     password = os.getenv("LINKEDIN_PASSWORD")
+    #     if username and password:
+    #         try:
+    #             login(driver, username, password)
+    #             logged_in = True
+    #         except Exception as e:
+    #             print(f"CRITICAL: Đăng nhập thủ công thất bại: {e}")
+    #     else:
+    #         print("CRITICAL: Thiếu thông tin LINKEDIN_USERNAME/PASSWORD trong .env")
 
-    # Nếu đăng nhập thành công (bằng bất cứ cách nào) thì mới chạy tiếp
-    if logged_in:
-        send_count = 0
+    # # Nếu đăng nhập thành công (bằng bất cứ cách nào) thì mới chạy tiếp
+    # if logged_in:
+    username = os.getenv("LINKEDIN_USERNAME")
+    password = os.getenv("LINKEDIN_PASSWORD")
+    login(driver, username, password)
+    """# **THỰC HIỆN GỬI KẾT NỐI**"""
+    send_count = 0
+    
+    for index, row in df.iterrows():
+        if send_count >= MAX_MESSAGES_PER_DAY:
+            print(f"INFO: Đã đạt giới hạn {MAX_MESSAGES_PER_DAY} người/ngày")
+            break
+            
+        profile_link = row['Link']
+        print(f"Processing: {profile_link}")
         
-        for index, row in df.iterrows():
-            if send_count >= MAX_MESSAGES_PER_DAY:
-                print(f"INFO: Đã đạt giới hạn {MAX_MESSAGES_PER_DAY} người/ngày")
-                break
+        datum = check_datum(row)
+        if isinstance(datum, str):
+            status = datum
+        else:
+            try:
+                driver.get(profile_link)
+                random_delay(5, 10) # Tránh bị LinkedIn quét bot
                 
-            profile_link = row['Link']
-            print(f"Processing: {profile_link}")
-            
-            datum = check_datum(row)
-            if isinstance(datum, str):
-                status = datum
-            else:
-                try:
-                    driver.get(profile_link)
-                    random_delay(5, 10) # Tránh bị LinkedIn quét bot
-                    
-                    status = send_message_optimized(driver, row)
-                    
-                    if status == "SUCCESS":
-                        send_count += 1
-                        status = "MESSAGE_SENT"
-                        print(f"-> Gửi thành công đến {row['Name']} ({send_count}/{MAX_MESSAGES_PER_DAY})")
-                    
-                except Exception as e:
-                    status = f"ERROR: {str(e)}"
-                    print(status)
+                status = send_message_optimized(driver, row)
+                
+                if status == "SUCCESS":
+                    send_count += 1
+                    status = "MESSAGE_SENT"
+                    print(f"-> Gửi thành công đến {row['Name']} ({send_count}/{MAX_MESSAGES_PER_DAY})")
+                
+            except Exception as e:
+                status = f"ERROR: {str(e)}"
+                print(status)
 
-            # Cập nhật trạng thái vào DataFrame
-            df.at[index, 'Status'] = status
-            
-            # Nghỉ giữa các lần gửi để tránh bị khóa account
-            if send_count < MAX_MESSAGES_PER_DAY:
-                random_delay(15, 25)
+        # Cập nhật trạng thái vào DataFrame
+        df.at[index, 'Status'] = status
+        
+        # Nghỉ giữa các lần gửi để tránh bị khóa account
+        if send_count < MAX_MESSAGES_PER_DAY:
+            random_delay(15, 25)
     
-    else:
-        print("CRITICAL: Không thể tiến hành gửi tin nhắn vì đăng nhập thất bại.")
+    # else:
+    #     print("CRITICAL: Không thể tiến hành gửi tin nhắn vì đăng nhập thất bại.")
     #CẬP NHẬT TRẠNG THÁI LÊN GOOGLE SHEETS.
     try:
         status_list = df[['Status']].values.tolist()
