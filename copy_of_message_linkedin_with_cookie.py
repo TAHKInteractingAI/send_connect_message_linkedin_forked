@@ -30,6 +30,13 @@ RANGE_NAME = 'A:E'
 GOOGLE_CREDS = os.getenv('GOOGLE_APPLICATION_CRED')
 
 """# **HÀM HỖ TRỢ**"""
+def safe_type_multiline(element, text):
+    element.click()
+    for line in text.split("\n"):
+        element.send_keys(line)
+        element.send_keys(Keys.SHIFT, Keys.ENTER)
+        time.sleep(random.uniform(0.1, 0.25))
+        
 def human_type(element, text):
     """Gõ phím như người thật với độ trễ ngẫu nhiên"""
     for char in text:
@@ -351,8 +358,8 @@ def login_with_cookie(driver):
 
 # XPATH ỨNG VỚI NÚT MESSAGE.
 #BUTTON_MESSAGE = "/html/body/div[5]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[1]/button"
-BUTTON_MESSAGE = "/html/body/div[6]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[1]/button"
-#BUTTON_MESSAGE = "/html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/section/div/div/div[2]/div[3]/div/div/div/a"
+#BUTTON_MESSAGE = "/html/body/div[6]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[1]/button"
+BUTTON_MESSAGE = "/html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/section/div/div/div[2]/div[3]/div/div/div/a"
 # XPATH ỨNG VỚI KHUNG TIN NHẮN. (CLASS NAME)
 FIELD_MESSAGE = "msg-form__contenteditable"
 # XPATH ỨNG VỚI KHUNG ĐÍNH KÈM TỆP. (CLASS NAME)
@@ -513,20 +520,25 @@ def send_message_optimized(driver, row):
         except:
             return "ERROR: MESSAGE BUTTON NOT FOUND"
         random_delay(1, 3)
-        
+        print("Message button found, ready to type input")
         # NHẬP NỘI DUNG
         msg_box = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.CLASS_NAME, FIELD_MESSAGE_CLASS)))
+            EC.element_to_be_clickable((By.CLASS_NAME, FIELD_MESSAGE_CLASS)))
+        time.sleep(2)
+        print("Message box found")
         msg_box.click()
-        #human_type(msg_box, message_template)
-        # msg_box.send_keys(full_message)
+        print("Ready to input")
+        #human_type(msg_box, full_message)
+        msg_box.send_keys(full_message)
+        print("Message input complete")
+        #safe_type_multiline(msg_box, full_message)
         #Nhập nội dung dùng JavaScript để hỗ trợ Link dài
-        driver.execute_script("""
-            var el = arguments[0];
-            var text = arguments[1];
-            el.focus();
-            document.execCommand('insertText', false, text);
-        """, msg_box, full_message)
+        # driver.execute_script("""
+        #     var el = arguments[0];
+        #     var text = arguments[1];
+        #     el.focus();
+        #     document.execCommand('insertText', false, text);
+        # """, msg_box, full_message)
         time.sleep(2)
         
         # # ATTACHMENT (NẾU CÓ)
