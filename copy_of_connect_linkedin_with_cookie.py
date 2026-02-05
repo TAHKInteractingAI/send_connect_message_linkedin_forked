@@ -390,13 +390,15 @@ def check_status(driver: webdriver.Chrome, xpath: str, *kws):
 
 
 def check_status_in_more(driver):
-    # CHECK UNCONNECTED STATUS IN MORE.
-    if check_status(driver, MORE_UNCONNECT, "Invite"):
-        return "UNCONNECTED"
-    # CHECK CONNECTED STATUS IN MORE.
-    if check_status(driver, MORE_CONNECT, "Remove your connection"):
+    # Kiểm tra nếu có nút Hủy kết nối (Nghĩa là ĐÃ CONNECTED)
+    if check_status(driver, MORE_CONNECT, "Remove", "Disconnect", "Unfollow"):
         return "CONNECTED"
-    return "UNKNOWN"  # Giá trị trả về mặc định
+    
+    # Kiểm tra nếu có nút Invite (Nghĩa là CHƯA CONNECT)
+    if check_status(driver, MORE_UNCONNECT, "Invite", "Connect"):
+        return "UNCONNECTED"
+        
+    return "CONNECTED"  # Giá trị trả về mặc định
 
 
 def find_element_in_list(driver: webdriver.Chrome, e_list: list[str]):
@@ -468,36 +470,37 @@ def send_connection(driver: webdriver.Chrome, xpath: str):
 
 def check_connection(driver: webdriver.Chrome, email: str, note: str = None):
     try:
-        # CHECK UNCONNECTED STATUS.
-        if check_status(driver, STATUS_CONNECT, "Invite"):
-            status = send_connection(driver, STATUS_CONNECT)  # Gửi kết nối không có ghi chú
-            print(f"STATUS: {status}")
-            return status
+        # 1. Kiểm tra nếu đã là bạn bè (Có nút Message/Follow)
+        if check_status(driver, STATUS_MESSAGE, "Message", "Following"):
+            print("STATUS: ALREADY CONNECTED")
+            return "CONNECTED"
 
-        # CHECK PENDING STATUS.
-        if check_status(driver, STATUS_CONNECT, "Pending"):
+        # 2. Kiểm tra trạng thái đang chờ (Pending)
+        if check_status(driver, STATUS_CONNECT, "Pending", "Withdraw"):
             print("STATUS: PENDING")
             return "PENDING"
 
-        # FIND BUTTON MORE.
-        print("CHECKING IN MORE", end=" ")
-        try:
-            button_more = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, BUTTON_MORE)))
-            button_more.click()
-        except TimeoutException:
-            print("ERROR: BUTTON MORE NOT FOUND!")
-            return "ERROR: BUTTON MORE NOT FOUND!"
-        except NoSuchElementException:
-            print("ERROR: BUTTON MORE NOT FOUND!")
-            return "ERROR: BUTTON MORE NOT FOUND!"
-
-        # CHECK CONNECTED STATUS.
-        if check_status(driver, STATUS_MESSAGE, "Message", "Follow", "Following"):
-            status = check_status_in_more(driver)
-            if status == "UNCONNECTED":
-                status = send_connection(driver, MORE_UNCONNECT)  # Gửi kết nối không có ghi chú
-            print(f"STATUS: {status}")
+        # 3. Kiểm tra nút Connect trực diện
+        if check_status(driver, STATUS_CONNECT, "Invite", "Connect"):
+            status = send_connection(driver, STATUS_CONNECT)
             return status
+
+        # 4. Nếu không thấy gì, thử tìm trong nút MORE
+        print("CHECKING IN MORE...", end=" ")
+        try:
+            button_more = WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, BUTTON_MORE)))
+            button_more.click()
+            time.sleep(1)
+            status_in_more = check_status_in_more(driver)
+            
+            if status_in_more == "UNCONNECTED":
+                return send_connection(driver, MORE_UNCONNECT)
+            return status_in_more
+            
+        except Exception:
+            print("Nút More không tương tác được hoặc không có.")
+            
+        return "CONNECTED" # Default cuối cùng nếu thấy nút Message nhưng không check được trong More
 
     except Exception as e:
         print(f"ERROR: {e}")
