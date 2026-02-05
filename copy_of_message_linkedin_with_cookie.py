@@ -38,29 +38,63 @@ def human_type(element, text):
 def random_delay(min_s=2, max_s=5):
     time.sleep(random.uniform(min_s, max_s))
 def get_data_with_links(sheet):
-    # Lấy toàn bộ dữ liệu dưới dạng công thức để thấy được =HYPERLINK(...)
-    data_formula = sheet.get_all_values(value_render_option='FORMULA')
-    headers = data_formula[0]
-    rows = data_formula[1:]
+    # 1. Lấy toàn bộ giá trị của bảng tính (để biết chính xác số dòng hiện có)
+    all_values = sheet.get_all_values()
+    if len(all_values) < 2:
+        return pd.DataFrame()
+
+    headers = all_values[1]  # Dòng 2 (index 1) là header
+    data_rows = all_values[2:] # Dữ liệu thực tế từ dòng 3
+    num_rows = len(data_rows)
+
+    # 2. Lấy metadata của cột E (Attachment) - Giả sử là cột số 5
+    # Chỉ lấy đúng phạm vi tương ứng với số dòng dữ liệu đang có
+    spreadsheet = sheet.spreadsheet
+    sheet_name = sheet.title
+    range_metadata = f"{sheet_name}!E3:E{2 + num_rows}"
     
-    processed_data = []
-    for row in rows:
-        row_dict = dict(zip(headers, row))
-        attachment_val = str(row_dict.get('Attachment', ''))
-        
-        # Tìm tất cả các link trong ô (trường hợp có nhiều link phân cách bằng dấu phẩy)
-        # Regex tìm nội dung trong ngoặc kép đầu tiên của hàm HYPERLINK
-        links = re.findall(r'HYPERLINK\("([^"]+)"', attachment_val)
-        names = re.findall(r'HYPERLINK\("[^"]+",\s*"([^"]+)"', attachment_val)
-        
-        if links:
-            # Gộp lại thành định dạng: Name: Link
-            formatted_attachments = [f"{n}: {l}" for n, l in zip(names, links)]
-            row_dict['Attachment'] = ", ".join(formatted_attachments)
-        
-        processed_data.append(row_dict)
+    res_metadata = spreadsheet.fetch_sheet_metadata({
+        'includeGridData': True,
+        'ranges': [range_metadata]
+    })
     
-    return pd.DataFrame(processed_data)
+    links_per_row = []
+    # Truy cập vào cấu trúc dữ liệu JSON của Google
+    sheets_data = res_metadata.get('sheets', [])[0].get('data', [])[0]
+    rowData = sheets_data.get('rowData', [])
+    
+    for row in rowData:
+        cell_links = []
+        values = row.get('values', [])
+        if values:
+            cell = values[0]
+            # Ưu tiên 1: Link bao trùm toàn bộ ô
+            if 'hyperlink' in cell:
+                cell_links.append(cell['hyperlink'])
+            # Ưu tiên 2: Nhiều link trong các đoạn văn bản (Rich Text)
+            elif 'textFormatRuns' in cell:
+                for run in cell['textFormatRuns']:
+                    url = run.get('format', {}).get('link', {}).get('uri')
+                    if url:
+                        cell_links.append(url)
+        
+        # Gộp các link, loại bỏ trùng lặp bằng set
+        unique_links = list(dict.fromkeys(cell_links))
+        links_per_row.append(", ".join(unique_links))
+
+    # 3. Đảm bảo links_per_row có độ dài bằng với data_rows
+    # Nếu metadata trả về thiếu, bù cho đủ bằng chuỗi rỗng
+    while len(links_per_row) < num_rows:
+        links_per_row.append("")
+
+    # 4. Tạo DataFrame
+    df = pd.DataFrame(data_rows, columns=headers)
+    
+    # Cập nhật cột Attachment (cần chắc chắn tên cột đúng 100% với file Sheets)
+    if 'Attachment' in df.columns:
+        df['Attachment'] = links_per_row[:num_rows]
+    
+    return df
 def save_cookies(driver):
     """Lưu cookies vào file"""
     with open(COOKIES_FILE, "wb") as cookies_file:
@@ -105,8 +139,8 @@ client = gspread.authorize(creds)
 # Lấy dữ liệu từ bảng tính
 sheet = client.open_by_key(SPREADSHEET_ID).worksheet('Sheet1')
 values = sheet.get_all_values()
-df = pd.DataFrame(values[2:], columns=values[1])
-
+#df = pd.DataFrame(values[2:], columns=values[1])
+df = get_data_with_links(sheet)
 #print(df)
 
 """# **HIỂN THỊ THÔNG TIN GOOGLE SHEETS**"""
@@ -317,7 +351,8 @@ def login_with_cookie(driver):
 
 # XPATH ỨNG VỚI NÚT MESSAGE.
 #BUTTON_MESSAGE = "/html/body/div[5]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[1]/button"
-BUTTON_MESSAGE = "/html/body/div[6]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[1]/button"
+#BUTTON_MESSAGE = "/html/body/div[6]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[1]/button"
+BUTTON_MESSAGE = "/html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/section/div/div/div[2]/div[3]/div/div/div/a"
 # XPATH ỨNG VỚI KHUNG TIN NHẮN. (CLASS NAME)
 FIELD_MESSAGE = "msg-form__contenteditable"
 # XPATH ỨNG VỚI KHUNG ĐÍNH KÈM TỆP. (CLASS NAME)
