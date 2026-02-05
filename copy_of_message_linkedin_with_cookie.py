@@ -10,6 +10,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
+from selenium.webdriver.common.action_chains import ActionChains
 #from IPython.display import Image, display
 from oauth2client.service_account import ServiceAccountCredentials
 from fastapi import FastAPI
@@ -166,7 +167,7 @@ def get_driver():
     options.add_argument('--no-sandbox')
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument('--disable-gpu')
-    options.add_argument('--headless=new')
+    #options.add_argument('--headless=new')
     options.add_argument("--window-size=1920,1200")
     
     # 3. CHỐNG PHÁT HIỆN BOT (Stealth Mode)
@@ -209,7 +210,7 @@ def handle_code_verification(driver: webdriver.Chrome):
         # --- PHẦN XỬ LÝ CHECKBOX ROBOT ---
         try:
             # 1. Đợi iframe xuất hiện (dùng Selector linh hoạt hơn)
-            recaptcha_iframe = WebDriverWait(driver, 15).until(
+            recaptcha_iframe = WebDriverWait(driver, 30).until(
                 EC.presence_of_element_located((By.XPATH, "//iframe[contains(@title, 'reCAPTCHA')]"))
             )
             
@@ -505,9 +506,10 @@ def send_message_optimized(driver, row):
         attachment = str(row.get('Attachment', "")).strip()
         if attachment and attachment.lower() != "nan":
             # Nối link vào cuối tin nhắn theo định dạng rõ ràng
-            full_message = f"{message_template}\n\nFile đính kèm: {attachment}"
+            full_message = f"{message_template}\n\nAttached profile files: {attachment}"
         else:
             full_message = message_template
+        print(full_message)
         # attachment_path = None
         # if row.get('Attachment') and str(row.get('Attachment')).strip()!= "":
         #     attachment_path = os.path.abspath(row['Attachment'])
@@ -519,18 +521,22 @@ def send_message_optimized(driver, row):
             msg_btn.click()
         except:
             return "ERROR: MESSAGE BUTTON NOT FOUND"
-        random_delay(1, 3)
+        time.sleep(2)
         print("Message button found, ready to type input")
         # NHẬP NỘI DUNG
-        msg_box = WebDriverWait(driver, 10).until(
-            EC.element_to_be_clickable((By.CLASS_NAME, FIELD_MESSAGE_CLASS)))
-        time.sleep(2)
-        print("Message box found")
-        msg_box.click()
-        print("Ready to input")
+        # msg_box = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, FIELD_MESSAGE_CLASS)))
+        #print("Message box found")
+        #msg_box.click()
+        #print("Ready to input")
         #human_type(msg_box, full_message)
-        msg_box.send_keys(full_message)
+        # msg_box.send_keys(full_message)
+        #driver.switch_to.active_element.send_keys(full_message)
+        actions = ActionChains(driver)
+        actions.send_keys(full_message)
+        actions.perform()
         print("Message input complete")
+        actions.send_keys(Keys.SPACE).perform()
+        time.sleep(2)
         #safe_type_multiline(msg_box, full_message)
         #Nhập nội dung dùng JavaScript để hỗ trợ Link dài
         # driver.execute_script("""
@@ -539,8 +545,14 @@ def send_message_optimized(driver, row):
         #     el.focus();
         #     document.execCommand('insertText', false, text);
         # """, msg_box, full_message)
-        time.sleep(2)
-        
+        #time.sleep(2)
+        try:
+            actions.key_down(Keys.CONTROL).send_keys(Keys.ENTER).key_up(Keys.CONTROL).perform()
+            random_delay(2, 3)
+            return "SUCCESS"
+        except Exception as e:
+            return f"ERROR: {str(e)}"
+            
         # # ATTACHMENT (NẾU CÓ)
         # if attachment_path and os.path.exists(attachment_path):
         #     try:
@@ -555,14 +567,14 @@ def send_message_optimized(driver, row):
         #           print(f"WARNING: Không tìm thấy file {attachment_path}, bỏ qua đính kèm.")
         
         # GỬI
-        send_btn = driver.find_element(By.CLASS_NAME, BUTTON_SEND_CLASS)
+        # send_btn = driver.find_element(By.CLASS_NAME, BUTTON_SEND_CLASS)
         
-        if send_btn.is_enabled():
-            send_btn.click()
-            random_delay(2, 4)
-            return "SUCCESS"
-        else:
-            return "ERROR: SEND BUTTON DISABLED"
+        # if send_btn.is_enabled():
+        #     send_btn.click()
+        #     random_delay(2, 4)
+        #     return "SUCCESS"
+        # else:
+        #     return "ERROR: SEND BUTTON DISABLED"
         
     except Exception as e:
         return f"ERROR: {str(e)}"
