@@ -11,6 +11,8 @@ from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
 #from IPython.display import Image, display
 from oauth2client.service_account import ServiceAccountCredentials
 from fastapi import FastAPI
@@ -182,7 +184,8 @@ def get_driver():
     options.add_argument("--disable-notifications")
     
     # Khởi tạo driver
-    driver = webdriver.Chrome(options=options)
+    service = Service(ChromeDriverManager().install())
+    driver = webdriver.Chrome(service=service, options=options)
     
     # 4. Ẩn thuộc tính navigator.webdriver bằng Script thực thi ngay khi load trang
     driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
@@ -547,11 +550,23 @@ def send_message_optimized(driver, row):
         # """, msg_box, full_message)
         #time.sleep(2)
         try:
-            actions.key_down(Keys.CONTROL).send_keys(Keys.ENTER).key_up(Keys.CONTROL).perform()
-            random_delay(2, 3)
+            # Tìm nút Gửi bằng XPATH linh hoạt (thường ổn định hơn Class)
+            send_btn_xpath = "//button[contains(@class, 'msg-form__send-button')] | //button[text()='Send']"
+            send_btn = WebDriverWait(driver, 10).until(
+                EC.element_to_be_clickable((By.XPATH, send_btn_xpath))
+            )
+            
+            # Click bằng JavaScript để vượt qua các lớp đè (Overlay)
+            driver.execute_script("arguments[0].click();", send_btn)
+            print("INFO: Đã nhấn nút Gửi bằng JS")
+            random_delay(2, 4)
             return "SUCCESS"
+            
         except Exception as e:
-            return f"ERROR: {str(e)}"
+            print(f"WARNING: Nút gửi không click được, thử Ctrl+Enter dự phòng: {e}")
+            actions.key_down(Keys.CONTROL).send_keys(Keys.ENTER).key_up(Keys.CONTROL).perform()
+            random_delay(2, 4)
+            return "SUCCESS"
             
         # # ATTACHMENT (NẾU CÓ)
         # if attachment_path and os.path.exists(attachment_path):
