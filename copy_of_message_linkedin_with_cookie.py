@@ -512,7 +512,7 @@ def send_message_optimized(driver, row):
             full_message = f"{message_template}\n\nAttached profile files: {attachment}"
         else:
             full_message = message_template
-        print(full_message)
+        #print(full_message)
         # attachment_path = None
         # if row.get('Attachment') and str(row.get('Attachment')).strip()!= "":
         #     attachment_path = os.path.abspath(row['Attachment'])

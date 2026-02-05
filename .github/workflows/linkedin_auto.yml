@@ -60,3 +60,11 @@ jobs:
         with:
           path: linkedin_cookies.pkl
           key: ${{ runner.os }}-linkedin-session-${{ github.run_id }}
+
+      - name: Upload Screenshot
+        if: always() # Luôn thực hiện kể cả khi script bị lỗi
+        uses: actions/upload-artifact@v4
+        with:
+          name: linkedin-screenshots
+          path: ./*.png  # Lấy tất cả các file có đuôi .png trong thư mục gốc
+          retention-days: 2
