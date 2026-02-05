@@ -306,7 +306,8 @@ def login(driver: webdriver.Chrome, username: str, password: str):
     login_button.click()
 
     time.sleep(5)
-
+    handle_code_verification(driver)
+    handle_cookie_acceptance(driver)
     # Lưu cookies và thông tin đăng nhập sau khi đăng nhập thành công
     save_cookies(driver)
     #save_credentials(username, password)
