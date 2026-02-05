@@ -351,8 +351,8 @@ def login_with_cookie(driver):
 
 # XPATH ỨNG VỚI NÚT MESSAGE.
 #BUTTON_MESSAGE = "/html/body/div[5]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[1]/button"
-#BUTTON_MESSAGE = "/html/body/div[6]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[1]/button"
-BUTTON_MESSAGE = "/html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/section/div/div/div[2]/div[3]/div/div/div/a"
+BUTTON_MESSAGE = "/html/body/div[6]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[1]/button"
+#BUTTON_MESSAGE = "/html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/section/div/div/div[2]/div[3]/div/div/div/a"
 # XPATH ỨNG VỚI KHUNG TIN NHẮN. (CLASS NAME)
 FIELD_MESSAGE = "msg-form__contenteditable"
 # XPATH ỨNG VỚI KHUNG ĐÍNH KÈM TỆP. (CLASS NAME)
