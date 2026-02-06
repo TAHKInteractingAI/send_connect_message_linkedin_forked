@@ -12,6 +12,7 @@ Original file is located at
 
 
 import os
+import base64
 import time
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -55,6 +56,14 @@ RANGE_NAME = os.getenv('RANGE_NAME')
 GOOGLE_CREDS = os.getenv('GOOGLE_APPLICATION_CRED')
 
 """# **HÀM HỖ TRỢ**"""
+def restore_cookie_from_secret():
+    raw_cookie = os.getenv('RAW_COOKIE_BASE64')
+    # Chỉ tạo file nếu chưa có (để ưu tiên cache của GitHub)
+    if raw_cookie and not os.path.exists('linkedin_cookies.pkl'):
+        with open('linkedin_cookies.pkl', 'wb') as f:
+            f.write(base64.b64decode(raw_cookie))
+        print("✅ Đã tạo file linkedin_cookies.pkl từ GitHub Secret!")
+        
 def human_type(element, text):
     """Gõ phím như người thật với độ trễ ngẫu nhiên"""
     for char in text:
@@ -509,6 +518,8 @@ def check_connection(driver: webdriver.Chrome, email: str, note: str = None):
         return "ERROR: UNKNOWN"
 
 def main_connect():
+    restore_cookie_from_secret()
+    
     # 1. ĐỌC DỮ LIỆU ĐẢM BẢO KHÔNG THIẾU DÒNG/CỘT
     result = sheet.values().get(spreadsheetId=SPREADSHEET_ID, range=RANGE_NAME).execute()
     values = result.get('values', [])

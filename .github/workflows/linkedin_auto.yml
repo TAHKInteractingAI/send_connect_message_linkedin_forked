@@ -40,6 +40,7 @@ jobs:
           GOOGLE_APPLICATION_CRED: ${{ secrets.GOOGLE_APPLICATION_CRED }}
           LINKEDIN_USERNAME: ${{ secrets.LINKEDIN_USERNAME }}
           LINKEDIN_PASSWORD: ${{ secrets.LINKEDIN_PASSWORD }}
+          RAW_COOKIE_BASE64: ${{ secrets.RAW_COOKIE_BASE64 }}
           LINKEDIN_COOKIE: ${{ secrets.LINKEDIN_COOKIE }}
         run: python -c "from copy_of_connect_linkedin_with_cookie import main_connect; main_connect()"
 
@@ -49,6 +50,7 @@ jobs:
           SPREADSHEET_MESS_ID: ${{ secrets.SPREADSHEET_MESS_ID }}
           GOOGLE_APPLICATION_CRED: ${{ secrets.GOOGLE_APPLICATION_CRED }}
           LINKEDIN_USERNAME: ${{ secrets.LINKEDIN_USERNAME }}
+          RAW_COOKIE_BASE64: ${{ secrets.RAW_COOKIE_BASE64 }}
           LINKEDIN_PASSWORD: ${{ secrets.LINKEDIN_PASSWORD }}
           LINKEDIN_COOKIE: ${{ secrets.LINKEDIN_COOKIE }}
         run: python -c "from copy_of_message_linkedin_with_cookie import main_mess; main_mess()"

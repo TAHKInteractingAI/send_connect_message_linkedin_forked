@@ -2,6 +2,7 @@
 import json
 import os
 import time
+import base64
 import random, pickle
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -12,7 +13,6 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.chrome.service import Service
-from selenium_stealth import stealth
 from webdriver_manager.chrome import ChromeDriverManager
 #from IPython.display import Image, display
 from oauth2client.service_account import ServiceAccountCredentials
@@ -34,12 +34,13 @@ RANGE_NAME = 'A:E'
 GOOGLE_CREDS = os.getenv('GOOGLE_APPLICATION_CRED')
 
 """# **HÀM HỖ TRỢ**"""
-def safe_type_multiline(element, text):
-    element.click()
-    for line in text.split("\n"):
-        element.send_keys(line)
-        element.send_keys(Keys.SHIFT, Keys.ENTER)
-        time.sleep(random.uniform(0.1, 0.25))
+def restore_cookie_from_secret():
+    raw_cookie = os.getenv('RAW_COOKIE_BASE64')
+    # Chỉ tạo file nếu chưa có (để ưu tiên cache của GitHub)
+    if raw_cookie and not os.path.exists('linkedin_cookies.pkl'):
+        with open('linkedin_cookies.pkl', 'wb') as f:
+            f.write(base64.b64decode(raw_cookie))
+        print("✅ Đã tạo file linkedin_cookies.pkl từ GitHub Secret!")
         
 def human_type(element, text):
     """Gõ phím như người thật với độ trễ ngẫu nhiên"""
@@ -161,29 +162,41 @@ df = get_data_with_links(sheet)
 """# **CẤU HÌNH DRIVER**"""
 def get_driver():
     options = webdriver.ChromeOptions()
-    options.add_argument('--headless=new') # LinkedIn quét headless rất kỹ, stealth sẽ giúp xử lý việc này
-    options.add_argument('--no-sandbox')
-    options.add_argument('--disable-dev-shm-usage')
-    options.add_argument('--window-size=1920,1080')
     
-    # Loại bỏ các flag tự động hóa mặc định của Chrome
+    # 1. Định nghĩa một User-Agent nhất quán (Tránh khai báo 2 lần)
+    user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    options.add_argument(f"user-agent={user_agent}")
+
+    # 2. Các thiết lập cơ bản cho môi trường Linux/Docker (GitHub Actions)
+    options.add_argument('--no-sandbox')
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument('--disable-gpu')
+    options.add_argument('--headless=new')
+    options.add_argument("--window-size=1920,1200")
+    
+    # 3. CHỐNG PHÁT HIỆN BOT (Stealth Mode)
+    # Loại bỏ cờ 'nút điều khiển tự động'
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option('useAutomationExtension', False)
-
-    driver = webdriver.Chrome(
-        service=Service(ChromeDriverManager().install()),
-        options=options
-    )
-
-    # 2. Áp dụng Selenium Stealth
-    stealth(driver,
-        languages=["en-US", "en"],
-        vendor="Google Inc.",
-        platform="Win32",
-        webgl_vendor="Intel Inc.",
-        renderer="Intel Iris OpenGL Engine",
-        fix_hairline=True,
-    )
+    # Vô hiệu hóa tính năng AutomationControlled của Blink
+    options.add_argument("--disable-blink-features=AutomationControlled")
+    
+    # Thêm các cờ để trình duyệt giống người dùng thật hơn
+    options.add_argument("--disable-infobars")
+    options.add_argument("--disable-notifications")
+    
+    # Khởi tạo driver
+    service = Service(ChromeDriverManager().install())
+    driver = webdriver.Chrome(service=service, options=options)
+    
+    # 4. Ẩn thuộc tính navigator.webdriver bằng Script thực thi ngay khi load trang
+    driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
+        "source": """
+            Object.defineProperty(navigator, 'webdriver', {
+                get: () => undefined
+            })
+        """
+    })
     
     return driver
 
@@ -556,6 +569,9 @@ def send_message_optimized(driver, row):
 
 def main_mess():
     """Luồng chính: Ưu tiên Cookie -> Login Manual -> Gửi tin nhắn"""
+    
+    restore_cookie_from_secret()
+    
     driver = get_driver()
     
     # # THỰC HIỆN ĐĂNG NHẬP

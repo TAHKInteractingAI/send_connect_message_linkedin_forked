@@ -1,7 +1,6 @@
 fastapi
 uvicorn
 selenium
-selenium-stealth
 webdriver-manager
 python-dotenv
 pandas
