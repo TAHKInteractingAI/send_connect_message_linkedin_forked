@@ -12,6 +12,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.chrome.service import Service
+from selenium_stealth import stealth
 from webdriver_manager.chrome import ChromeDriverManager
 #from IPython.display import Image, display
 from oauth2client.service_account import ServiceAccountCredentials
@@ -160,41 +161,29 @@ df = get_data_with_links(sheet)
 """# **CẤU HÌNH DRIVER**"""
 def get_driver():
     options = webdriver.ChromeOptions()
-    
-    # 1. Định nghĩa một User-Agent nhất quán (Tránh khai báo 2 lần)
-    user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    options.add_argument(f"user-agent={user_agent}")
-
-    # 2. Các thiết lập cơ bản cho môi trường Linux/Docker (GitHub Actions)
+    options.add_argument('--headless=new') # LinkedIn quét headless rất kỹ, stealth sẽ giúp xử lý việc này
     options.add_argument('--no-sandbox')
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument('--disable-gpu')
-    options.add_argument('--headless=new')
-    options.add_argument("--window-size=1920,1200")
+    options.add_argument('--disable-dev-shm-usage')
+    options.add_argument('--window-size=1920,1080')
     
-    # 3. CHỐNG PHÁT HIỆN BOT (Stealth Mode)
-    # Loại bỏ cờ 'nút điều khiển tự động'
+    # Loại bỏ các flag tự động hóa mặc định của Chrome
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option('useAutomationExtension', False)
-    # Vô hiệu hóa tính năng AutomationControlled của Blink
-    options.add_argument("--disable-blink-features=AutomationControlled")
-    
-    # Thêm các cờ để trình duyệt giống người dùng thật hơn
-    options.add_argument("--disable-infobars")
-    options.add_argument("--disable-notifications")
-    
-    # Khởi tạo driver
-    service = Service(ChromeDriverManager().install())
-    driver = webdriver.Chrome(service=service, options=options)
-    
-    # 4. Ẩn thuộc tính navigator.webdriver bằng Script thực thi ngay khi load trang
-    driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
-        "source": """
-            Object.defineProperty(navigator, 'webdriver', {
-                get: () => undefined
-            })
-        """
-    })
+
+    driver = webdriver.Chrome(
+        service=Service(ChromeDriverManager().install()),
+        options=options
+    )
+
+    # 2. Áp dụng Selenium Stealth
+    stealth(driver,
+        languages=["en-US", "en"],
+        vendor="Google Inc.",
+        platform="Win32",
+        webgl_vendor="Intel Inc.",
+        renderer="Intel Iris OpenGL Engine",
+        fix_hairline=True,
+    )
     
     return driver
 
@@ -226,144 +215,67 @@ def handle_code_verification(driver: webdriver.Chrome):
     except:
         print("INFO: NO VERIFICATION DETECTED!")
 
-# def login(driver: webdriver.Chrome, username: str, password: str):
-#     """Đăng nhập vào LinkedIn với username và password mới nếu có sự thay đổi"""
-#     XPATH_USERNAME = '//*[@id="username"]'
-#     XPATH_PASSWORD = '//*[@id="password"]'
-#     XPATH_LOGIN_BUTTON = '//button[contains(@class, "btn__primary--large") and @aria-label="Sign in"]'
-
-#     driver.get("https://www.linkedin.com/login")
-#     time.sleep(2)  # Ensure the page is fully loaded
-
-#     # Kiểm tra nếu có cookies và kiểm tra xem username, password có thay đổi không
-#     #credentials = load_credentials()
-
-#     if os.path.exists(COOKIES_FILE):# and credentials:
-#         # Kiểm tra nếu username hoặc password đã thay đổi
-#         #if credentials['username'] == username and credentials['password'] == password:
-#             # Tải cookies và thử đăng nhập
-#         load_cookies(driver, COOKIES_FILE)
-#         driver.get("https://www.linkedin.com/feed")
-#         time.sleep(3)
-
-#         # Kiểm tra xem đã đăng nhập chưa bằng cách xem có biểu tượng người dùng không
-#         try:
-#             user_icon = WebDriverWait(driver, 10).until(
-#                 EC.presence_of_element_located((By.CLASS_NAME, 'global-nav__me-photo')))
-#             print("INFO: Logged in using cookies!")
-#             driver.save_screenshot("cookie-login.png")
-#             # save user_icon
-#             #user_icon.screenshot("user_icon.png")
-#             # display_screenshot(driver, "status.png")
-#             return
-#         except:
-#             print("INFO: Cookies không hợp lệ, thử đăng nhập lại...")
-
-#     # Nếu thông tin đăng nhập đã thay đổi hoặc không có cookies, đăng nhập thủ công
-#     driver.get("https://www.linkedin.com/login")
-#     username_field = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, XPATH_USERNAME)))
-#     password_field = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, XPATH_PASSWORD)))
-#     login_button = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, XPATH_LOGIN_BUTTON)))
-
-#     human_type(username_field, username)
-#     #username_field.send_keys(username)
-#     time.sleep(2)
-#     human_type(password_field, password)
-#     #password_field.send_keys(password)
-#     time.sleep(2)
-#     login_button.click()
-
-#     time.sleep(5)
-#     handle_code_verification(driver)
-#     handle_cookie_acceptance(driver)
-#     # Lưu cookies và thông tin đăng nhập sau khi đăng nhập thành công
-#     save_cookies(driver)
-#     #save_credentials(username, password)
-#     print("INFO: Đăng nhập thành công và đã lưu cookies, thông tin đăng nhập!")
-#     driver.save_screenshot("post-login.png")
-#     # user_icon = WebDriverWait(driver, 10).until(
-#     #                 EC.presence_of_element_located((By.CLASS_NAME, 'global-nav__me-photo')))
-#     # # save user_icon
-#     # user_icon.screenshot("user_icon.png")
-#     # display_screenshot(driver, "status.png")
-#     # display_full_screenshot(driver)
-
 def login(driver: webdriver.Chrome, username: str, password: str):
-    """
-    Logic đăng nhập:
-    1. Thử load từ linkedin_cookies.pkl.
-    2. Nếu thất bại/không có: Thử đăng nhập bằng li_at cookie từ .env và lưu lại vào pkl.
-    3. Nếu vẫn không được: Đăng nhập thủ công bằng user/pass và lưu lại vào pkl.
-    """
-    # Bước 1: Thử load file cookie.pkl hiện có
-    if os.path.exists(COOKIES_FILE):
-        print("INFO: Đang thử đăng nhập bằng file cookies.pkl...")
-        driver.get("https://www.linkedin.com")
-        load_cookies(driver, COOKIES_FILE)
-        driver.refresh()
-        time.sleep(5)
-        
-        if "feed" in driver.current_url.lower():
-            print("SUCCESS: Đăng nhập thành công bằng file cookies.pkl!")
-            return
-
-    # Bước 2: Thử bằng Cookie li_at từ .env (nếu Bước 1 không thành công)
-    print("INFO: File cookies.pkl không khả dụng. Thử đăng nhập bằng li_at...")
-    li_at_cookie = os.getenv("LINKEDIN_COOKIE")
-    if li_at_cookie:
-        driver.get("https://www.linkedin.com")
-        driver.delete_all_cookies()
-        driver.add_cookie({
-            "name": "li_at",
-            "value": li_at_cookie,
-            "domain": ".linkedin.com",
-            "path": "/",
-            "secure": True
-        })
-        driver.get("https://www.linkedin.com/feed/")
-        time.sleep(5)
-        
-        if "feed" in driver.current_url.lower():
-            print("SUCCESS: Đăng nhập bằng li_at thành công! Đang lưu lại cookies.pkl...")
-            save_cookies(driver)
-            return
-    
-    # Bước 3: Đăng nhập thủ công (Manual Login)
-    print("INFO: Tất cả phương pháp cookie thất bại. Bắt đầu đăng nhập thủ công...")
+    """Đăng nhập vào LinkedIn với username và password mới nếu có sự thay đổi"""
     XPATH_USERNAME = '//*[@id="username"]'
     XPATH_PASSWORD = '//*[@id="password"]'
     XPATH_LOGIN_BUTTON = '//button[contains(@class, "btn__primary--large") and @aria-label="Sign in"]'
 
     driver.get("https://www.linkedin.com/login")
-    try:
-        username_field = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, XPATH_USERNAME)))
-        password_field = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, XPATH_PASSWORD)))
-        login_button = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, XPATH_LOGIN_BUTTON)))
+    time.sleep(2)  # Ensure the page is fully loaded
 
-        human_type(username_field, username)
-        time.sleep(random.uniform(1, 2))
-        human_type(password_field, password)
-        time.sleep(random.uniform(1, 2))
-        login_button.click()
+    # Kiểm tra nếu có cookies và kiểm tra xem username, password có thay đổi không
+    #credentials = load_credentials()
 
-        time.sleep(5)
+    if os.path.exists(COOKIES_FILE):# and credentials:
+        # Kiểm tra nếu username hoặc password đã thay đổi
+        #if credentials['username'] == username and credentials['password'] == password:
+            # Tải cookies và thử đăng nhập
+        load_cookies(driver, COOKIES_FILE)
+        driver.get("https://www.linkedin.com/feed")
+        time.sleep(3)
 
-        # Xử lý các checkpoint nếu có (Mã xác thực, Cookie acceptance)
-        handle_code_verification(driver)
-        handle_cookie_acceptance(driver)
+        # Kiểm tra xem đã đăng nhập chưa bằng cách xem có biểu tượng người dùng không
+        try:
+            user_icon = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.CLASS_NAME, 'global-nav__me-photo')))
+            print("INFO: Logged in using cookies!")
+            driver.save_screenshot("cookie-login.png")
+            # save user_icon
+            #user_icon.screenshot("user_icon.png")
+            # display_screenshot(driver, "status.png")
+            return
+        except:
+            print("INFO: Cookies không hợp lệ, thử đăng nhập lại...")
 
-        # Lưu lại cookie sau khi đăng nhập thủ công thành công
-        if "feed" in driver.current_url.lower() or driver.find_elements(By.CLASS_NAME, 'global-nav__me-photo'):
-            print("SUCCESS: Đăng nhập thủ công thành công và đã lưu cookies.pkl!")
-            save_cookies(driver)
-            driver.save_screenshot("post-login-success.png")
-        else:
-            print("WARNING: Đăng nhập thủ công có thể đã bị chặn bởi mã xác minh (Xem screenshot).")
-            driver.save_screenshot("post-login-checkpoint.png")
-            
-    except Exception as e:
-        print(f"ERROR: Lỗi trong quá trình đăng nhập thủ công: {e}")
-        driver.save_screenshot("login-error.png")
+    # Nếu thông tin đăng nhập đã thay đổi hoặc không có cookies, đăng nhập thủ công
+    driver.get("https://www.linkedin.com/login")
+    username_field = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, XPATH_USERNAME)))
+    password_field = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, XPATH_PASSWORD)))
+    login_button = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, XPATH_LOGIN_BUTTON)))
+
+    human_type(username_field, username)
+    #username_field.send_keys(username)
+    time.sleep(2)
+    human_type(password_field, password)
+    #password_field.send_keys(password)
+    time.sleep(2)
+    login_button.click()
+
+    time.sleep(5)
+    handle_code_verification(driver)
+    handle_cookie_acceptance(driver)
+    # Lưu cookies và thông tin đăng nhập sau khi đăng nhập thành công
+    save_cookies(driver)
+    #save_credentials(username, password)
+    print("INFO: Đăng nhập thành công và đã lưu cookies, thông tin đăng nhập!")
+    driver.save_screenshot("post-login.png")
+    # user_icon = WebDriverWait(driver, 10).until(
+    #                 EC.presence_of_element_located((By.CLASS_NAME, 'global-nav__me-photo')))
+    # # save user_icon
+    # user_icon.screenshot("user_icon.png")
+    # display_screenshot(driver, "status.png")
+    # display_full_screenshot(driver)
 
 def login_with_cookie(driver):
     """Xử lý đăng nhập bằng Cookie li_at từ .env"""

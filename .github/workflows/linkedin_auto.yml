@@ -28,7 +28,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: linkedin_cookies.pkl
-          key: ${{ runner.os }}-linkedin-session-${{ github.run_id }}
+          key: ${{ runner.os }}-linkedin-session
           restore-keys: |
             ${{ runner.os }}-linkedin-session-
 
@@ -59,7 +59,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: linkedin_cookies.pkl
-          key: ${{ runner.os }}-linkedin-session-${{ github.run_id }}
+          key: ${{ runner.os }}-linkedin-session
 
       - name: Upload Screenshot
         if: always() # Luôn thực hiện kể cả khi script bị lỗi
