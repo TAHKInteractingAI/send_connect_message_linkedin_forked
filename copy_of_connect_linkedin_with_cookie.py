@@ -388,11 +388,15 @@ BUTTON_SEND_NOTE = [
 BUTTON_SEND_WITHOUT_NOTE = "//button[contains(@aria-label, 'Send without a note')]"#"/html/body/div[4]/div/div/div[3]/button[2]"
 # XPATH ỨNG VỚI NÚT GỬI CONNECT MÀ DÙNG NOTE.
 TEXTFIELD_VERIFY_NOTE = "/html/body/div[3]/div/div/div[2]/label/input"
-# --- BỘ XPATH THÔNG MINH (CẬP NHẬT 2026) ---
-XPATH_CONNECT_BTN = "//button[contains(@aria-label, 'Invite') or contains(@aria-label, 'Connect')][not(contains(@aria-label, 'via'))]"
-XPATH_MESSAGE_BTN = "//button[contains(@aria-label, 'Message') or contains(@aria-label, 'Send a message')]"
-XPATH_MORE_BTN = "//button[contains(@aria-label, 'More actions')]"
+# XPATH tìm nút Connect (ưu tiên nút có aria-label chứa "Invite" hoặc "Connect")
+XPATH_CONNECT = "//button[contains(@aria-label, 'Invite') or contains(@aria-label, 'Connect')][not(contains(@aria-label, 'via'))]"
+# XPATH tìm nút Message (để kiểm tra đã là bạn bè chưa)
+XPATH_MESSAGE = "//button[contains(@aria-label, 'Message') or contains(@aria-label, 'Send a message')]"
+# XPATH tìm nút More
+XPATH_MORE = "//button[contains(@aria-label, 'More actions')]"
+# XPATH tìm nút Connect ẩn bên trong menu More
 XPATH_MORE_CONNECT = "//div[contains(@aria-label, 'Invite') or contains(@aria-label, 'Connect') and @role='button']"
+# XPATH tìm nút xác nhận gửi không kèm Note (Popup)
 XPATH_SEND_WITHOUT_NOTE = "//button[contains(@aria-label, 'Send without a note')]"
 """# **HÀM GỬI KẾT NỐI**"""
 
@@ -489,51 +493,67 @@ def find_element_in_list(driver: webdriver.Chrome, e_list: list[str]):
 #     except Exception as e:
 #         print(f"\n {e}")
 #         return "ERROR: UNKNOWN"
-def send_connection(driver):
-    """Thực hiện click gửi kết nối"""
+def send_connection(driver: webdriver.Chrome):
+    """Thực hiện click nút Connect và xác nhận gửi"""
     try:
-        # Tìm nút Connect trực diện
-        connect_btn = WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, XPATH_CONNECT_BTN)))
+        # 1. Tìm và click nút Connect chính hoặc trong More đã được click trước đó
+        # (Sử dụng XPATH_CONNECT chung cho cả hai trường hợp)
+        connect_btn = WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, XPATH_CONNECT)))
         connect_btn.click()
-        time.sleep(2)
-        
-        # Click xác nhận gửi không kèm note
-        send_now = WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, XPATH_SEND_WITHOUT_NOTE)))
-        send_now.click()
-        return "SUCCESS"
-    except TimeoutException:
-        return "NOT_FOUND"
-def check_connection(driver, email=""):
-    """Kiểm tra trạng thái và điều phối việc gửi"""
+        time.sleep(random.uniform(2, 3))
+
+        # 2. Xử lý popup xác nhận "Send without a note"
+        try:
+            send_now = WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, XPATH_SEND_WITHOUT_NOTE)))
+            send_now.click()
+            return "SUCCESS"
+        except TimeoutException:
+            # Một số trường hợp click Connect xong là gửi luôn (không có popup)
+            return "SUCCESS"
+            
+    except Exception as e:
+        print(f"Lỗi khi thực hiện gửi: {e}")
+        return "ERROR"
+
+def check_connection(driver: webdriver.Chrome, email: str = ""):
+    """Kiểm tra trạng thái và điều phối gửi kết nối"""
     try:
-        # 1. Kiểm tra nếu đang ở trạng thái chờ (Pending)
-        if "Pending" in driver.page_source or "Withdraw" in driver.page_source:
+        # ƯU TIÊN 1: Kiểm tra xem đã ở trạng thái chờ (Pending/Withdraw) chưa
+        page_source = driver.page_source
+        if "Pending" in page_source or "Withdraw" in page_source:
             return "PENDING"
 
-        # 2. Thử gửi Connect trực tiếp
-        res = send_connection(driver)
-        if res == "SUCCESS": return "SUCCESS"
+        # ƯU TIÊN 2: Thử tìm nút Connect trực tiếp trên màn hình
+        if len(driver.find_elements(By.XPATH, XPATH_CONNECT)) > 0:
+            return send_connection(driver)
 
-        # 3. Nếu không thấy nút, thử tìm trong nút "More"
+        # ƯU TIÊN 3: Thử tìm trong nút "More"
+        print("🔍 Đang tìm trong nút More...")
         try:
-            more_btn = driver.find_element(By.XPATH, XPATH_MORE_BTN)
+            more_btn = WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, XPATH_MORE)))
             more_btn.click()
             time.sleep(1.5)
+            
+            # Tìm nút Connect bên trong menu More
             connect_in_more = driver.find_element(By.XPATH, XPATH_MORE_CONNECT)
             connect_in_more.click()
             time.sleep(2)
-            driver.find_element(By.XPATH, XPATH_SEND_WITHOUT_NOTE).click()
+            
+            # Click xác nhận gửi
+            send_now = WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, XPATH_SEND_WITHOUT_NOTE)))
+            send_now.click()
             return "SUCCESS"
         except:
-            pass
+            print("Không tìm thấy nút Connect trong More.")
 
-        # 4. Kiểm tra nếu đã là bạn bè (nút Message tồn tại)
-        if len(driver.find_elements(By.XPATH, XPATH_MESSAGE_BTN)) > 0:
+        # ƯU TIÊN 4: Nếu thấy nút Message mà không thấy Connect -> Đã là bạn bè
+        if len(driver.find_elements(By.XPATH, XPATH_MESSAGE)) > 0:
             return "CONNECTED"
 
         return "UNKNOWN"
     except Exception as e:
-        return f"ERROR: {str(e)[:30]}"
+        print(f"Lỗi check_connection: {e}")
+        return "ERROR"
 # def check_connection(driver: webdriver.Chrome, email: str, note: str = None):
 #     try:
 #         # 1. Kiểm tra nếu đã là bạn bè (Có nút Message/Follow)
