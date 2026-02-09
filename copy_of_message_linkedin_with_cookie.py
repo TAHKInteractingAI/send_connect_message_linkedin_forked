@@ -46,7 +46,7 @@ def get_missive_linkedin_code():
         return f"Lỗi API: {response.status_code}"
     conversations = response.json().get("conversations", [])
     temp = [c for c in conversations if 'name' in c['authors'][0] and c['authors'][0]['name'] == 'LinkedIn']
-    return temp[0]['latest_message_subject'].split(' ')[-1:]
+    return temp[0]['latest_message_subject'].split(' ')[-1:][0]
 
 def restore_cookie_from_secret():
     raw_cookie = os.getenv('RAW_COOKIE_BASE64')
