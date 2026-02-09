@@ -339,7 +339,7 @@ def login(driver: webdriver.Chrome, username: str, password: str):
     time.sleep(2)
     login_button.click()
 
-    time.sleep(5)
+    time.sleep(10)
 
     handle_code_verification(driver)
     handle_cookie_acceptance(driver)
