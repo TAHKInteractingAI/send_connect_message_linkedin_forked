@@ -51,9 +51,7 @@ headers = {"Authorization": f"Bearer {MISSIVE_API_KEY}", "Content-Type": "applic
 params = {"limmit": 20, "inbox":"true"} 
 COOKIES_FILE = 'linkedin_cookies.pkl'
 CREDENTIALS_FILE = 'linkedin_credentials.pkl'
-BROWSERLESS_API_KEY = os.getenv("BROWSERLESS_API_KEY")
 MAX_CONNECTIONS_PER_DAY = 15
-
 SPREADSHEET_ID = os.getenv('SPREADSHEET_ID')
 RANGE_NAME = "Sheet1!A:E"
 GOOGLE_CREDS = os.getenv('GOOGLE_APPLICATION_CRED')
