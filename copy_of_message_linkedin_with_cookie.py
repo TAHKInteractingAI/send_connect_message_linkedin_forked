@@ -235,7 +235,7 @@ def handle_code_verification(driver: webdriver.Chrome):
         submit_button = WebDriverWait(driver, 20).until(CONDITION)
         # ENTER VERIFICATION CODE.
         code = get_missive_linkedin_code()#input("Verification code required! Check your email and enter the code: ")
-        human_type(verification_field, code)
+        verification_field.send_keys(code)
         time.sleep(3)
         submit_button.click()
         time.sleep(5)

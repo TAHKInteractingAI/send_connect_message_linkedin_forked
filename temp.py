@@ -121,6 +121,7 @@ from copy_of_message_linkedin_with_cookie import get_missive_linkedin_code
 a = get_missive_linkedin_code()
 #d = [c for c in a if 'name' in c['authors'][0] and c['authors'][0]['name'] == 'LinkedIn']
 print(a)
+print(type(a))
 
 # if __name__ == "__main__":
 #     # code = get_missive_linkedin_code()
