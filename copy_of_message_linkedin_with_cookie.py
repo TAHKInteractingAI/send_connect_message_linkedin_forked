@@ -40,13 +40,30 @@ GOOGLE_CREDS = os.getenv('GOOGLE_APPLICATION_CRED')
 
 """# **HÀM HỖ TRỢ**"""
 def get_missive_linkedin_code():
+    # Sửa lỗi chính tả 'limmit' và thêm 'inbox' theo đúng docs
+    correct_params = {"limit": 5, "inbox": "true"}
     
-    response = requests.get("https://public.missiveapp.com/v1/conversations", headers=headers, params=params)
-    if response.status_code != 200:
-        return f"Lỗi API: {response.status_code}"
-    conversations = response.json().get("conversations", [])
-    temp = [c for c in conversations if 'name' in c['authors'][0] and c['authors'][0]['name'] == 'LinkedIn']
-    return temp[0]['latest_message_subject'].split(' ')[-1:][0]
+    try:
+        response = requests.get("https://public.missiveapp.com/v1/conversations", 
+                                headers=headers, params=correct_params)
+        if response.status_code != 200:
+            return None
+
+        conversations = response.json().get("conversations", [])
+        
+        # Lọc những hội thoại từ LinkedIn
+        linkedin_mails = [c for c in conversations if 'LinkedIn' in c.get('latest_message_subject', '')]
+        
+        if linkedin_mails:
+            # Lấy email mới nhất ở đầu danh sách
+            subject = linkedin_mails[0]['latest_message_subject']
+            # Dùng Regex để tìm chính xác dãy 6 chữ số trong tiêu đề
+            code_match = re.search(r'\b\d{6}\b', subject)
+            if code_match:
+                return code_match.group(0)
+    except Exception as e:
+        print(f"Lỗi truy cập Missive: {e}")
+    return None
 
 # def restore_cookie_from_secret():
 #     raw_cookie = os.getenv('RAW_COOKIE_BASE64')
@@ -225,25 +242,30 @@ def handle_cookie_acceptance(driver: webdriver.Chrome):
 
 def handle_code_verification(driver: webdriver.Chrome):
     try:        
-        # FIND VERIFICATION FIELD.
-        ID_FIELD = "input__email_verification_pin"
-        CONDITION = EC.presence_of_element_located((By.ID, ID_FIELD))
-        verification_field = WebDriverWait(driver, 20).until(CONDITION)
-        # FIND SUBMIT BUTTON.
-        ID_FIELD = "email-pin-submit-button"
-        CONDITION = EC.presence_of_element_located((By.ID, ID_FIELD))
-        submit_button = WebDriverWait(driver, 20).until(CONDITION)
-        # ENTER VERIFICATION CODE.
-        code = get_missive_linkedin_code()#input("Verification code required! Check your email and enter the code: ")
-        print(code)
-        driver.save_screenshot("before_verification.png")
-        time.sleep(2)
-        verification_field.send_keys(code)
-        time.sleep(3)
-        submit_button.click()
-        time.sleep(5)
-    except:
-        print("INFO: NO VERIFICATION DETECTED!")
+        # Đợi ô nhập mã xuất hiện trên giao diện LinkedIn
+        WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.ID, "input__email_verification_pin")))
+        
+        print("Đang đợi email OTP mới từ LinkedIn (thử lại sau mỗi 10s)...")
+        code = None
+        # Thử 3 lần để đợi email mới đổ về Missive
+        for i in range(3):
+            time.sleep(12) # Đợi 12s mỗi lần để email kịp sync
+            code = get_missive_linkedin_code()
+            if code:
+                print(f"INFO: Đã lấy được mã code: {code}")
+                break
+        
+        if code:
+            verification_field = driver.find_element(By.ID, "input__email_verification_pin")
+            submit_button = driver.find_element(By.ID, "email-pin-submit-button")
+            verification_field.send_keys(code)
+            time.sleep(2)
+            submit_button.click()
+            time.sleep(5)
+        else:
+            print("ERROR: Không tìm thấy mã code mới sau 3 lần thử.")
+    except Exception as e:
+        print(f"INFO: Không phát hiện yêu cầu OTP hoặc lỗi: {e}")
 
 def login(driver: webdriver.Chrome, username: str, password: str):
     """Đăng nhập vào LinkedIn với username và password mới nếu có sự thay đổi"""
