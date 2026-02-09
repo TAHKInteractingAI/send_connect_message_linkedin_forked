@@ -28,7 +28,10 @@ jobs:
         uses: actions/cache@v3
         with:
           path: linkedin_cookies.pkl
-          key: ${{ runner.os }}-linkedin-session
+          # Key này sẽ luôn thay đổi theo mỗi lần chạy (Run ID)
+          key: ${{ runner.os }}-linkedin-session-${{ github.run_id }}
+          # Nếu không tìm thấy key trên (chắc chắn là không vì run_id mới), 
+          # GitHub sẽ tìm cache có tiền tố này và lấy cái mới nhất (latest)
           restore-keys: |
             ${{ runner.os }}-linkedin-session-
 
@@ -62,7 +65,8 @@ jobs:
         uses: actions/cache@v3
         with:
           path: linkedin_cookies.pkl
-          key: ${{ runner.os }}-linkedin-session
+          # Lưu với key chứa run_id của lần chạy hiện tại
+          key: ${{ runner.os }}-linkedin-session-${{ github.run_id }}
 
       - name: Upload Screenshot
         if: always() # Luôn thực hiện kể cả khi script bị lỗi
