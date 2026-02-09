@@ -361,13 +361,11 @@ def login(driver: webdriver.Chrome, username: str, password: str):
 """# **XPATH**"""
 
 # XPATH ỨNG VỚI NÚT CONNECT.
-STATUS_CONNECT = "//button[contains(@aria-label, 'Invite') or contains(@aria-label, 'Connect')][not(contains(@aria-label, 'via'))]"#"/html/body/div/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/button[1]"
+STATUS_CONNECT = "/html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/section/div/div/div[2]/div[3]/div/div/div[1]/div/div/a"
 
 # XPATH ỨNG VỚI NÚT MESSAGE.
-#STATUS_MESSAGE = "/html/body/div[5]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[1]/button"
-STATUS_MESSAGE = "//button[contains(@aria-label, 'Send a message') or contains(@aria-label, 'Message')]"#"/html/body/div/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[1]/button"
+STATUS_MESSAGE = "/html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/div/section/div/div/div[2]/div[3]/div/div/div[1]/a"#"/html/body/div/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[1]/button"
 # XPATH ỨNG VỚI NÚT MORE.
-#BUTTON_MORE = "/html/body/div[5]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[2]/button"
 BUTTON_MORE = "//button[contains(@aria-label, 'More')]"#"/html/body/div/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[2]/button"
 
 # XPATH ỨNG VỚI NÚT CONNECT KHI NHẤN NÚT MORE.
