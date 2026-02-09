@@ -46,6 +46,9 @@ from google.oauth2 import service_account
 load_dotenv()
 
 # --- CONFIG ---
+MISSIVE_API_KEY = os.getenv('MISSIVE_API_KEY')
+headers = {"Authorization": f"Bearer {MISSIVE_API_KEY}", "Content-Type": "application/json"}
+params = {"limmit": 20, "inbox":"true"} 
 COOKIES_FILE = 'linkedin_cookies.pkl'
 CREDENTIALS_FILE = 'linkedin_credentials.pkl'
 BROWSERLESS_API_KEY = os.getenv("BROWSERLESS_API_KEY")
@@ -56,6 +59,14 @@ RANGE_NAME = os.getenv('RANGE_NAME')
 GOOGLE_CREDS = os.getenv('GOOGLE_APPLICATION_CRED')
 
 """# **HÀM HỖ TRỢ**"""
+def get_missive_linkedin_code():
+    response = requests.get("https://public.missiveapp.com/v1/conversations", headers=headers, params=params)
+    if response.status_code != 200:
+        return f"Lỗi API: {response.status_code}"
+    conversations = response.json().get("conversations", [])
+    temp = [c for c in conversations if 'name' in c['authors'][0] and c['authors'][0]['name'] == 'LinkedIn']
+    return temp[0]['latest_message_subject'].split(' ')[-1:]
+
 def restore_cookie_from_secret():
     raw_cookie = os.getenv('RAW_COOKIE_BASE64')
     # Chỉ tạo file nếu chưa có (để ưu tiên cache của GitHub)
@@ -264,24 +275,21 @@ def handle_cookie_acceptance(driver: webdriver.Chrome):
         print("INFO: COOKIES IS NOT REQUIRED!")
 
 def handle_code_verification(driver: webdriver.Chrome):
-    """Xử lý yêu cầu nhập mã xác thực nếu có"""
-    try:
-        # Tìm trường nhập mã xác thực
+    try:        
+        # FIND VERIFICATION FIELD.
         ID_FIELD = "input__email_verification_pin"
         CONDITION = EC.presence_of_element_located((By.ID, ID_FIELD))
         verification_field = WebDriverWait(driver, 20).until(CONDITION)
-
-        # Tìm nút submit
+        # FIND SUBMIT BUTTON.
         ID_FIELD = "email-pin-submit-button"
         CONDITION = EC.presence_of_element_located((By.ID, ID_FIELD))
         submit_button = WebDriverWait(driver, 20).until(CONDITION)
-
-        # Nhập mã xác thực
-        code = input("Verification code required! Check your email and enter the code: ")
-        verification_field.send_keys(code)
-        time.sleep(1)
+        # ENTER VERIFICATION CODE.
+        code = get_missive_linkedin_code()#input("Verification code required! Check your email and enter the code: ")
+        human_type(verification_field, code)
+        time.sleep(3)
         submit_button.click()
-        time.sleep(2)
+        time.sleep(5)
     except:
         print("INFO: NO VERIFICATION DETECTED!")
 

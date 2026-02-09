@@ -53,6 +53,7 @@ jobs:
           RAW_COOKIE_BASE64: ${{ secrets.RAW_COOKIE_BASE64 }}
           LINKEDIN_PASSWORD: ${{ secrets.LINKEDIN_PASSWORD }}
           LINKEDIN_COOKIE: ${{ secrets.LINKEDIN_COOKIE }}
+          MISSIVE_API_KEY: ${{ secrets.MISSIVE_API_KEY }}
         run: python -c "from copy_of_message_linkedin_with_cookie import main_mess; main_mess()"
 
       # Lưu lại cookie mới nhất sau khi script chạy xong

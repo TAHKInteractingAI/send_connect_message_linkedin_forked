@@ -17,6 +17,8 @@ from webdriver_manager.chrome import ChromeDriverManager
 #from IPython.display import Image, display
 from oauth2client.service_account import ServiceAccountCredentials
 from fastapi import FastAPI
+import requests
+import re
 import pandas as pd
 from dotenv import load_dotenv
 import gspread
@@ -25,8 +27,11 @@ from pathlib import Path
 load_dotenv()
 
 """# **CONFIG**"""
+MISSIVE_API_KEY = os.getenv('MISSIVE_API_KEY')
 MAX_MESSAGES_PER_DAY = 15
 COOKIES_FILE = 'linkedin_cookies.pkl'
+headers = {"Authorization": f"Bearer {MISSIVE_API_KEY}", "Content-Type": "application/json"}
+params = {"limmit": 20, "inbox":"true"} 
 # Thông tin bảng tính
 SPREADSHEET_ID = os.getenv('SPREADSHEET_MESS_ID')
 SHEET_NAME = 'Sheet1'
@@ -34,6 +39,15 @@ RANGE_NAME = 'A:E'
 GOOGLE_CREDS = os.getenv('GOOGLE_APPLICATION_CRED')
 
 """# **HÀM HỖ TRỢ**"""
+def get_missive_linkedin_code():
+    
+    response = requests.get("https://public.missiveapp.com/v1/conversations", headers=headers, params=params)
+    if response.status_code != 200:
+        return f"Lỗi API: {response.status_code}"
+    conversations = response.json().get("conversations", [])
+    temp = [c for c in conversations if 'name' in c['authors'][0] and c['authors'][0]['name'] == 'LinkedIn']
+    return temp[0]['latest_message_subject'].split(' ')[-1:]
+
 def restore_cookie_from_secret():
     raw_cookie = os.getenv('RAW_COOKIE_BASE64')
     # Chỉ tạo file nếu chưa có (để ưu tiên cache của GitHub)
@@ -220,11 +234,11 @@ def handle_code_verification(driver: webdriver.Chrome):
         CONDITION = EC.presence_of_element_located((By.ID, ID_FIELD))
         submit_button = WebDriverWait(driver, 20).until(CONDITION)
         # ENTER VERIFICATION CODE.
-        code = input("Verification code required! Check your email and enter the code: ")
-        verification_field.send_keys(code)
-        time.sleep(1)
+        code = get_missive_linkedin_code()#input("Verification code required! Check your email and enter the code: ")
+        human_type(verification_field, code)
+        time.sleep(3)
         submit_button.click()
-        time.sleep(2)
+        time.sleep(5)
     except:
         print("INFO: NO VERIFICATION DETECTED!")
 
@@ -266,7 +280,7 @@ def login(driver: webdriver.Chrome, username: str, password: str):
     username_field = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, XPATH_USERNAME)))
     password_field = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, XPATH_PASSWORD)))
     login_button = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, XPATH_LOGIN_BUTTON)))
-
+    
     human_type(username_field, username)
     #username_field.send_keys(username)
     time.sleep(2)
@@ -275,7 +289,7 @@ def login(driver: webdriver.Chrome, username: str, password: str):
     time.sleep(2)
     login_button.click()
 
-    time.sleep(5)
+    time.sleep(7)
     handle_code_verification(driver)
     handle_cookie_acceptance(driver)
     # Lưu cookies và thông tin đăng nhập sau khi đăng nhập thành công
@@ -569,9 +583,7 @@ def send_message_optimized(driver, row):
 
 def main_mess():
     """Luồng chính: Ưu tiên Cookie -> Login Manual -> Gửi tin nhắn"""
-    
-    restore_cookie_from_secret()
-    
+        
     driver = get_driver()
     
     # # THỰC HIỆN ĐĂNG NHẬP
