@@ -388,7 +388,12 @@ BUTTON_SEND_NOTE = [
 BUTTON_SEND_WITHOUT_NOTE = "//button[contains(@aria-label, 'Send without a note')]"#"/html/body/div[4]/div/div/div[3]/button[2]"
 # XPATH ỨNG VỚI NÚT GỬI CONNECT MÀ DÙNG NOTE.
 TEXTFIELD_VERIFY_NOTE = "/html/body/div[3]/div/div/div[2]/label/input"
-
+# --- BỘ XPATH THÔNG MINH (CẬP NHẬT 2026) ---
+XPATH_CONNECT_BTN = "//button[contains(@aria-label, 'Invite') or contains(@aria-label, 'Connect')][not(contains(@aria-label, 'via'))]"
+XPATH_MESSAGE_BTN = "//button[contains(@aria-label, 'Message') or contains(@aria-label, 'Send a message')]"
+XPATH_MORE_BTN = "//button[contains(@aria-label, 'More actions')]"
+XPATH_MORE_CONNECT = "//div[contains(@aria-label, 'Invite') or contains(@aria-label, 'Connect') and @role='button']"
+XPATH_SEND_WITHOUT_NOTE = "//button[contains(@aria-label, 'Send without a note')]"
 """# **HÀM GỬI KẾT NỐI**"""
 
 def check_status(driver: webdriver.Chrome, xpath: str, *kws):
@@ -456,72 +461,116 @@ def find_element_in_list(driver: webdriver.Chrome, e_list: list[str]):
 #     except Exception as e:
 #         print(f"\n {e}")
 #         return "ERROR: UNKNOWN"
-def send_connection(driver: webdriver.Chrome, xpath: str):
+# def send_connection(driver: webdriver.Chrome, xpath: str):
+#     try:
+#         # CLICK BUTTON CONNECT.
+#         try:
+#             # Use EC.element_to_be_clickable for the connect button
+#             e = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[6]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/button[1]')))
+#             e.click()
+#             time.sleep(random.uniform(1.5, 3.5)) # Random delay after clicking connect
+#         except TimeoutException:
+#             return "ERROR: BUTTON CONNECT NOT FOUND"
+#         except Exception as ex:
+#             return f"ERROR: FAILED TO CLICK CONNECT BUTTON: {ex}"
+
+#         # Wait for the 'Send without note' button to be present and clickable  #Tối ưu chờ khi thành công
+#         try:
+#             e = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, BUTTON_SEND_WITHOUT_NOTE)))
+#             e.click()
+#             time.sleep(random.uniform(1.5, 3.5)) # Random delay after clicking send without note
+#         except TimeoutException:
+#             return "ERROR: BUTTON SEND WITHOUT NOTE NOT FOUND"
+#         except Exception as ex:
+#             return f"ERROR: FAILED TO CLICK SEND WITHOUT NOTE: {ex}"
+
+#         return "SUCCESS: CONNECT WITHOUT NOTE!"
+
+#     except Exception as e:
+#         print(f"\n {e}")
+#         return "ERROR: UNKNOWN"
+def send_connection(driver):
+    """Thực hiện click gửi kết nối"""
     try:
-        # CLICK BUTTON CONNECT.
-        try:
-            # Use EC.element_to_be_clickable for the connect button
-            e = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[6]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/button[1]')))
-            e.click()
-            time.sleep(random.uniform(1.5, 3.5)) # Random delay after clicking connect
-        except TimeoutException:
-            return "ERROR: BUTTON CONNECT NOT FOUND"
-        except Exception as ex:
-            return f"ERROR: FAILED TO CLICK CONNECT BUTTON: {ex}"
-
-        # Wait for the 'Send without note' button to be present and clickable  #Tối ưu chờ khi thành công
-        try:
-            e = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, BUTTON_SEND_WITHOUT_NOTE)))
-            e.click()
-            time.sleep(random.uniform(1.5, 3.5)) # Random delay after clicking send without note
-        except TimeoutException:
-            return "ERROR: BUTTON SEND WITHOUT NOTE NOT FOUND"
-        except Exception as ex:
-            return f"ERROR: FAILED TO CLICK SEND WITHOUT NOTE: {ex}"
-
-        return "SUCCESS: CONNECT WITHOUT NOTE!"
-
-    except Exception as e:
-        print(f"\n {e}")
-        return "ERROR: UNKNOWN"
-
-def check_connection(driver: webdriver.Chrome, email: str, note: str = None):
+        # Tìm nút Connect trực diện
+        connect_btn = WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, XPATH_CONNECT_BTN)))
+        connect_btn.click()
+        time.sleep(2)
+        
+        # Click xác nhận gửi không kèm note
+        send_now = WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, XPATH_SEND_WITHOUT_NOTE)))
+        send_now.click()
+        return "SUCCESS"
+    except TimeoutException:
+        return "NOT_FOUND"
+def check_connection(driver, email=""):
+    """Kiểm tra trạng thái và điều phối việc gửi"""
     try:
-        # 1. Kiểm tra nếu đã là bạn bè (Có nút Message/Follow)
-        if check_status(driver, STATUS_MESSAGE, "Message", "Following"):
-            print("STATUS: ALREADY CONNECTED")
-            return "CONNECTED"
-
-        # 2. Kiểm tra trạng thái đang chờ (Pending)
-        if check_status(driver, STATUS_CONNECT, "Pending", "Withdraw"):
-            print("STATUS: PENDING")
+        # 1. Kiểm tra nếu đang ở trạng thái chờ (Pending)
+        if "Pending" in driver.page_source or "Withdraw" in driver.page_source:
             return "PENDING"
 
-        # 3. Kiểm tra nút Connect trực diện
-        if check_status(driver, STATUS_CONNECT, "Invite", "Connect"):
-            status = send_connection(driver, STATUS_CONNECT)
-            return status
+        # 2. Thử gửi Connect trực tiếp
+        res = send_connection(driver)
+        if res == "SUCCESS": return "SUCCESS"
 
-        # 4. Nếu không thấy gì, thử tìm trong nút MORE
-        print("CHECKING IN MORE...", end=" ")
+        # 3. Nếu không thấy nút, thử tìm trong nút "More"
         try:
-            button_more = WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, BUTTON_MORE)))
-            button_more.click()
-            time.sleep(1)
-            status_in_more = check_status_in_more(driver)
-            
-            if status_in_more == "UNCONNECTED":
-                return send_connection(driver, MORE_UNCONNECT)
-            return status_in_more
-            
-        except Exception:
-            print("Nút More không tương tác được hoặc không có.")
-            
-        return "CONNECTED" # Default cuối cùng nếu thấy nút Message nhưng không check được trong More
+            more_btn = driver.find_element(By.XPATH, XPATH_MORE_BTN)
+            more_btn.click()
+            time.sleep(1.5)
+            connect_in_more = driver.find_element(By.XPATH, XPATH_MORE_CONNECT)
+            connect_in_more.click()
+            time.sleep(2)
+            driver.find_element(By.XPATH, XPATH_SEND_WITHOUT_NOTE).click()
+            return "SUCCESS"
+        except:
+            pass
 
+        # 4. Kiểm tra nếu đã là bạn bè (nút Message tồn tại)
+        if len(driver.find_elements(By.XPATH, XPATH_MESSAGE_BTN)) > 0:
+            return "CONNECTED"
+
+        return "UNKNOWN"
     except Exception as e:
-        print(f"ERROR: {e}")
-        return "ERROR: UNKNOWN"
+        return f"ERROR: {str(e)[:30]}"
+# def check_connection(driver: webdriver.Chrome, email: str, note: str = None):
+#     try:
+#         # 1. Kiểm tra nếu đã là bạn bè (Có nút Message/Follow)
+#         if check_status(driver, STATUS_MESSAGE, "Message", "Following"):
+#             print("STATUS: ALREADY CONNECTED")
+#             return "CONNECTED"
+
+#         # 2. Kiểm tra trạng thái đang chờ (Pending)
+#         if check_status(driver, STATUS_CONNECT, "Pending", "Withdraw"):
+#             print("STATUS: PENDING")
+#             return "PENDING"
+
+#         # 3. Kiểm tra nút Connect trực diện
+#         if check_status(driver, STATUS_CONNECT, "Invite", "Connect"):
+#             status = send_connection(driver, STATUS_CONNECT)
+#             return status
+
+#         # 4. Nếu không thấy gì, thử tìm trong nút MORE
+#         print("CHECKING IN MORE...", end=" ")
+#         try:
+#             button_more = WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, BUTTON_MORE)))
+#             button_more.click()
+#             time.sleep(1)
+#             status_in_more = check_status_in_more(driver)
+            
+#             if status_in_more == "UNCONNECTED":
+#                 return send_connection(driver, MORE_UNCONNECT)
+#             return status_in_more
+            
+#         except Exception:
+#             print("Nút More không tương tác được hoặc không có.")
+            
+#         return "CONNECTED" # Default cuối cùng nếu thấy nút Message nhưng không check được trong More
+
+#     except Exception as e:
+#         print(f"ERROR: {e}")
+#         return "ERROR: UNKNOWN"
 
 def main_connect():
     #restore_cookie_from_secret()
