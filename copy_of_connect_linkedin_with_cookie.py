@@ -415,7 +415,7 @@ def check_status_in_more(driver):
     if check_status(driver, MORE_UNCONNECT, "Invite", "Connect"):
         return "UNCONNECTED"
         
-    return "CONNECTED"  # Giá trị trả về mặc định
+    return "UNKNOWN"  # Giá trị trả về mặc định
 
 
 def find_element_in_list(driver: webdriver.Chrome, e_list: list[str]):
