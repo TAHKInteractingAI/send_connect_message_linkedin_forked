@@ -67,13 +67,13 @@ def get_missive_linkedin_code():
     temp = [c for c in conversations if 'name' in c['authors'][0] and c['authors'][0]['name'] == 'LinkedIn']
     return temp[0]['latest_message_subject'].split(' ')[-1:][0]
 
-def restore_cookie_from_secret():
-    raw_cookie = os.getenv('RAW_COOKIE_BASE64')
-    # Chỉ tạo file nếu chưa có (để ưu tiên cache của GitHub)
-    if raw_cookie and not os.path.exists('linkedin_cookies.pkl'):
-        with open('linkedin_cookies.pkl', 'wb') as f:
-            f.write(base64.b64decode(raw_cookie))
-        print("✅ Đã tạo file linkedin_cookies.pkl từ GitHub Secret!")
+# def restore_cookie_from_secret():
+#     raw_cookie = os.getenv('RAW_COOKIE_BASE64')
+#     # Chỉ tạo file nếu chưa có (để ưu tiên cache của GitHub)
+#     if raw_cookie and not os.path.exists('linkedin_cookies.pkl'):
+#         with open('linkedin_cookies.pkl', 'wb') as f:
+#             f.write(base64.b64decode(raw_cookie))
+#         print("✅ Đã tạo file linkedin_cookies.pkl từ GitHub Secret!")
         
 def human_type(element, text):
     """Gõ phím như người thật với độ trễ ngẫu nhiên"""
@@ -526,7 +526,7 @@ def check_connection(driver: webdriver.Chrome, email: str, note: str = None):
         return "ERROR: UNKNOWN"
 
 def main_connect():
-    restore_cookie_from_secret()
+    #restore_cookie_from_secret()
     
     # 1. ĐỌC DỮ LIỆU ĐẢM BẢO KHÔNG THIẾU DÒNG/CỘT
     result = sheet.values().get(spreadsheetId=SPREADSHEET_ID, range=RANGE_NAME).execute()
