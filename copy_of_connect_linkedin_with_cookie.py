@@ -21,6 +21,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
+from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 #from IPython.display import Image, display
@@ -134,7 +135,7 @@ def get_driver():
     options.add_argument('--no-sandbox')
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument('--disable-gpu')
-    options.add_argument('--headless=new')
+    #options.add_argument('--headless=new')
     options.add_argument("--window-size=1920,1200")
     
     # 3. CHỐNG PHÁT HIỆN BOT (Stealth Mode)
@@ -361,17 +362,21 @@ def login(driver: webdriver.Chrome, username: str, password: str):
 """# **XPATH**"""
 
 # XPATH ỨNG VỚI NÚT CONNECT.
-STATUS_CONNECT = "/html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/section/div/div/div[2]/div[3]/div/div/div[1]/div/div/a"
+#STATUS_CONNECT = "/html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/section/div/div/div[2]/div[3]/div/div/div[1]/div/div/a"
+XPATH_MAIN_CONNECT = "//main//a[contains(@aria-label, 'Invite') or contains(@aria-label, 'Connect')]"
 
 # XPATH ỨNG VỚI NÚT MESSAGE.
 STATUS_MESSAGE = "/html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/div/section/div/div/div[2]/div[3]/div/div/div[1]/a"#"/html/body/div/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[1]/button"
 # XPATH ỨNG VỚI NÚT MORE.
-BUTTON_MORE = "//button[contains(@aria-label, 'More')]"#"/html/body/div/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[2]/button"
+#BUTTON_MORE = "//button[contains(@aria-label, 'More')]"#"/html/body/div/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[2]/button"
+XPATH_MORE_BTN_MAIN = "//main//button[contains(@aria-label, 'More actions') or contains(@aria-label, 'More...')]"
 
 # XPATH ỨNG VỚI NÚT CONNECT KHI NHẤN NÚT MORE.
 MORE_UNCONNECT = "//div[contains(@aria-label, 'Invite') or contains(@aria-label, 'Connect') and @role='button']"#"/html/body/div/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[2]/div/div/ul/li[3]/div"
 # XPATH ỨNG VỚI NÚT UNCONNECT KHI NHẤN NÚT MORE.
-MORE_CONNECT = "/html/body/div/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[2]/div/div/ul/li[3]/div"
+#MORE_CONNECT = "/html/body/div/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[2]/div/div/ul/li[3]/div"
+XPATH_MORE_CONNECT = "//div[contains(@class, 'artdeco-dropdown__content')]//div[@role='button'][contains(., 'Connect') or contains(@aria-label, 'Connect')]"
+
 # XPATH ỨNG VỚI NÚT ADD A NOTE.
 BUTTON_ADD_NOTE = "/html/body/div[3]/div/div/div[3]/button[1]"
 # XPATH ỨNG VỚI KHUNG NHẬP NOTE.
@@ -385,19 +390,15 @@ BUTTON_SEND_NOTE = [
     "/html/body/div[3]/div/div/div[3]/button[3]"                # PREMIUM ACCOUNT.
 ]
 # XPATH ỨNG VỚI NÚT GỬI CONNECT MÀ KHÔNG DÙNG NOTE.
-BUTTON_SEND_WITHOUT_NOTE = "//button[contains(@aria-label, 'Send without a note')]"#"/html/body/div[4]/div/div/div[3]/button[2]"
+#XPATH_SEND_WITHOUT_NOTE = "//button[contains(@aria-label, 'Send without a note')]"
+XPATH_SEND_WITHOUT_NOTE = ".//button[contains(@aria-label, 'without a note')]"#"//button[contains(., 'Send without a note') or contains(@aria-label, 'Send without a note') or contains(., 'Send now')]"
+XPATH_SEND_BACKUP = ".//span[contains(normalize-space(), 'without a note')]/parent::button"
+#XPATH_SEND_WITHOUT_NOTE = "/html/body/div/div[4]//div/div[1]/div/div/div[3]/button[2]"
 # XPATH ỨNG VỚI NÚT GỬI CONNECT MÀ DÙNG NOTE.
 TEXTFIELD_VERIFY_NOTE = "/html/body/div[3]/div/div/div[2]/label/input"
-# XPATH tìm nút Connect (ưu tiên nút có aria-label chứa "Invite" hoặc "Connect")
-XPATH_CONNECT = "//button[contains(@aria-label, 'Invite') or contains(@aria-label, 'Connect')][not(contains(@aria-label, 'via'))]"
-# XPATH tìm nút Message (để kiểm tra đã là bạn bè chưa)
-XPATH_MESSAGE = "//button[contains(@aria-label, 'Message') or contains(@aria-label, 'Send a message')]"
-# XPATH tìm nút More
-XPATH_MORE = "//button[contains(@aria-label, 'More actions')]"
-# XPATH tìm nút Connect ẩn bên trong menu More
-XPATH_MORE_CONNECT = "//div[contains(@aria-label, 'Invite') or contains(@aria-label, 'Connect') and @role='button']"
-# XPATH tìm nút xác nhận gửi không kèm Note (Popup)
-XPATH_SEND_WITHOUT_NOTE = "//button[contains(@aria-label, 'Send without a note')]"
+# XPATH để nhận diện xem Modal "Add a note" có đang hiển thị hay không
+XPATH_MODAL_TITLE = "//h2[contains(., 'Add a note')]"
+
 """# **HÀM GỬI KẾT NỐI**"""
 
 def check_status(driver: webdriver.Chrome, xpath: str, *kws):
@@ -415,16 +416,16 @@ def check_status(driver: webdriver.Chrome, xpath: str, *kws):
     return False
 
 
-def check_status_in_more(driver):
-    # Kiểm tra nếu có nút Hủy kết nối (Nghĩa là ĐÃ CONNECTED)
-    if check_status(driver, MORE_CONNECT, "Remove", "Disconnect", "Unfollow"):
-        return "CONNECTED"
+# def check_status_in_more(driver):
+#     # Kiểm tra nếu có nút Hủy kết nối (Nghĩa là ĐÃ CONNECTED)
+#     if check_status(driver, MORE_CONNECT, "Remove", "Disconnect", "Unfollow"):
+#         return "CONNECTED"
     
-    # Kiểm tra nếu có nút Invite (Nghĩa là CHƯA CONNECT)
-    if check_status(driver, MORE_UNCONNECT, "Invite", "Connect"):
-        return "UNCONNECTED"
+#     # Kiểm tra nếu có nút Invite (Nghĩa là CHƯA CONNECT)
+#     if check_status(driver, MORE_UNCONNECT, "Invite", "Connect"):
+#         return "UNCONNECTED"
         
-    return "UNKNOWN"  # Giá trị trả về mặc định
+#     return "UNKNOWN"  # Giá trị trả về mặc định
 
 
 def find_element_in_list(driver: webdriver.Chrome, e_list: list[str]):
@@ -437,123 +438,85 @@ def find_element_in_list(driver: webdriver.Chrome, e_list: list[str]):
             print(f"An error occurred: {e}")
     return None
 
-# def send_connection(driver: webdriver.Chrome, xpath: str):
-#     try:
-#         # CLICK BUTTON CONNECT.
-#         try:
-#             e = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, '/html/body/div[6]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/button[1]')))
-#             e.click()
-#         except TimeoutException:
-#             return "ERROR: BUTTON CONNECT NOT FOUND"
-#         except Exception as ex:
-#             return f"ERROR: FAILED TO CLICK CONNECT BUTTON: {ex}"
-
-#         # Thay thế time.sleep bằng WebDriverWait để đảm bảo trang đã sẵn sàng
-#         WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, BUTTON_SEND_WITHOUT_NOTE)))
-
-#         # CLICK SEND WITHOUT NOTE.
-#         try:
-#             e = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, BUTTON_SEND_WITHOUT_NOTE)))
-#             e.click()
-#         except TimeoutException:
-#             return "ERROR: BUTTON SEND WITHOUT NOTE NOT FOUND"
-#         except Exception as ex:
-#             return f"ERROR: FAILED TO CLICK SEND WITHOUT NOTE: {ex}"
-
-#         return "SUCCESS: CONNECT WITHOUT NOTE!"
-
-#     except Exception as e:
-#         print(f"\n {e}")
-#         return "ERROR: UNKNOWN"
-# def send_connection(driver: webdriver.Chrome, xpath: str):
-#     try:
-#         # CLICK BUTTON CONNECT.
-#         try:
-#             # Use EC.element_to_be_clickable for the connect button
-#             e = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[6]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/button[1]')))
-#             e.click()
-#             time.sleep(random.uniform(1.5, 3.5)) # Random delay after clicking connect
-#         except TimeoutException:
-#             return "ERROR: BUTTON CONNECT NOT FOUND"
-#         except Exception as ex:
-#             return f"ERROR: FAILED TO CLICK CONNECT BUTTON: {ex}"
-
-#         # Wait for the 'Send without note' button to be present and clickable  #Tối ưu chờ khi thành công
-#         try:
-#             e = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, BUTTON_SEND_WITHOUT_NOTE)))
-#             e.click()
-#             time.sleep(random.uniform(1.5, 3.5)) # Random delay after clicking send without note
-#         except TimeoutException:
-#             return "ERROR: BUTTON SEND WITHOUT NOTE NOT FOUND"
-#         except Exception as ex:
-#             return f"ERROR: FAILED TO CLICK SEND WITHOUT NOTE: {ex}"
-
-#         return "SUCCESS: CONNECT WITHOUT NOTE!"
-
-#     except Exception as e:
-#         print(f"\n {e}")
-#         return "ERROR: UNKNOWN"
 def send_connection(driver: webdriver.Chrome):
-    """Thực hiện click nút Connect và xác nhận gửi"""
     try:
-        # 1. Tìm và click nút Connect chính hoặc trong More đã được click trước đó
-        # (Sử dụng XPATH_CONNECT chung cho cả hai trường hợp)
-        connect_btn = WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, XPATH_CONNECT)))
-        connect_btn.click()
-        time.sleep(random.uniform(2, 3))
+        wait = WebDriverWait(driver, 10)
+        actions = webdriver.ActionChains(driver)
+        # Bước 1 & 2: Click nút Connect chính (Giữ nguyên vì đã chạy tốt)
+        xpath_connect = "//main//a[contains(., 'Connect')] | //main//button[contains(., 'Connect')]"
+        connect_btn = wait.until(EC.element_to_be_clickable((By.XPATH, xpath_connect)))
+        driver.execute_script("arguments[0].click();", connect_btn)
+        print("🖱️ Bước 2: Đã Click nút Connect.")
 
-        # 2. Xử lý popup xác nhận "Send without a note"
-        try:
-            send_now = WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, XPATH_SEND_WITHOUT_NOTE)))
-            send_now.click()
-            return "SUCCESS"
-        except TimeoutException:
-            # Một số trường hợp click Connect xong là gửi luôn (không có popup)
-            return "SUCCESS"
-            
+        # Bước 3: Đợi Modal Container xuất hiện thực sự
+        print("⏳ Bước 3: Đang đợi Modal xuất hiện...")
+        #modal = wait.until(EC.presence_of_element_located((By.XPATH, XPATH_MODAL_CONTAINER)))
+        time.sleep(3) # Đợi animation của LinkedIn chạy xong
+
+        # Bước 4: Nhấn Tab 3 lần và Enter
+        print("⌨️ Bước 4: Đang thực hiện Tab -> Tab -> Tab -> Enter...")
+        
+        for i in range(3):
+            actions.send_keys(Keys.TAB).perform()
+            time.sleep(random.uniform(1, 3)) # Nghỉ random giữa các lần
+            print(f"   - Đã nhấn Tab lần {i+1}")
+        time.sleep(3)
+        actions.key_down(Keys.ENTER).pause(0.5).key_up(Keys.ENTER).perform()
+        print("✅ Bước 5: Đã nhấn Enter để gửi!")
+        
+        # Đợi 2s xem Modal có biến mất không để xác nhận thành công
+        time.sleep(3)
+        return "SUCCESS"
+                
     except Exception as e:
-        print(f"Lỗi khi thực hiện gửi: {e}")
-        return "ERROR"
+        print(f"❌ Lỗi tại send_connection: {str(e)}")
+        # Nếu bị kẹt, nhấn ESC để thoát Modal cho dòng tiếp theo
+        webdriver.ActionChains(driver).send_keys(Keys.ESCAPE).perform()
+        return "FAILED_STUCK_MODAL"
 
 def check_connection(driver: webdriver.Chrome, email: str = ""):
-    """Kiểm tra trạng thái và điều phối gửi kết nối"""
     try:
-        # ƯU TIÊN 1: Kiểm tra xem đã ở trạng thái chờ (Pending/Withdraw) chưa
-        page_source = driver.page_source
-        if "Pending" in page_source or "Withdraw" in page_source:
+        main_area = driver.find_element(By.TAG_NAME, "main")
+        main_text = main_area.text
+        
+        # 1. Check xem đã gửi chưa (Pending)
+        if "Pending" in main_text or "Withdraw" in main_text:
             return "PENDING"
 
-        # ƯU TIÊN 2: Thử tìm nút Connect trực tiếp trên màn hình
-        if len(driver.find_elements(By.XPATH, XPATH_CONNECT)) > 0:
-            return send_connection(driver)
+        # 2. Thử gửi qua nút Connect chính diện
+        res = send_connection(driver)
+        
+        # Nếu đã SUCCESS hoặc bị kẹt Modal (FAILED_STUCK_MODAL), thoát luôn
+        if res in ["SUCCESS", "FAILED_STUCK_MODAL"]:
+            return res
 
-        # ƯU TIÊN 3: Thử tìm trong nút "More"
-        print("🔍 Đang tìm trong nút More...")
+        # 3. Chỉ khi bước trên không tìm thấy nút Connect nào mới tìm trong More
+        print("🔍 Không thấy nút Connect chính diện, đang tìm trong 'More'...")
         try:
-            more_btn = WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, XPATH_MORE)))
-            more_btn.click()
-            time.sleep(1.5)
-            
-            # Tìm nút Connect bên trong menu More
-            connect_in_more = driver.find_element(By.XPATH, XPATH_MORE_CONNECT)
-            connect_in_more.click()
+            more_btn = driver.find_element(By.XPATH, XPATH_MORE_BTN_MAIN)
+            driver.execute_script("arguments[0].click();", more_btn)
             time.sleep(2)
             
-            # Click xác nhận gửi
-            send_now = WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, XPATH_SEND_WITHOUT_NOTE)))
-            send_now.click()
+            connect_opt = driver.find_element(By.XPATH, "//div[@role='button'][contains(., 'Connect')]")
+            driver.execute_script("arguments[0].click();", connect_opt)
+            
+            # Sau khi bấm Connect trong More, nó lại hiện Modal, dùng lại chiêu Tab + Enter
+            time.sleep(2)
+            actions = webdriver.ActionChains(driver)
+            for _ in range(3):
+                actions.send_keys(Keys.TAB).perform()
+                time.sleep(0.5)
+            actions.send_keys(Keys.ENTER).perform()
             return "SUCCESS"
         except:
-            print("Không tìm thấy nút Connect trong More.")
+            pass
 
-        # ƯU TIÊN 4: Nếu thấy nút Message mà không thấy Connect -> Đã là bạn bè
-        if len(driver.find_elements(By.XPATH, XPATH_MESSAGE)) > 0:
+        if "Message" in main_text:
             return "CONNECTED"
 
         return "UNKNOWN"
     except Exception as e:
-        print(f"Lỗi check_connection: {e}")
-        return "ERROR"
+        return f"ERROR: {str(e)[:20]}"
 # def check_connection(driver: webdriver.Chrome, email: str, note: str = None):
 #     try:
 #         # 1. Kiểm tra nếu đã là bạn bè (Có nút Message/Follow)
@@ -672,25 +635,25 @@ def main_connect():
             df.at[index, COL_STATUS] = "ERROR"
 
     # 4. CẬP NHẬT LẠI GOOGLE SHEETS
-    print("📤 Đang đồng bộ dữ liệu lên Sheets...")
+    # print("📤 Đang đồng bộ dữ liệu lên Sheets...")
     
-    # Xử lý giá trị NaN trước khi convert thành list
-    # fillna("") sẽ thay thế toàn bộ ô rỗng (NaN) bằng chuỗi rỗng hợp lệ với JSON
-    df_to_upload = df.fillna("") 
+    # # Xử lý giá trị NaN trước khi convert thành list
+    # # fillna("") sẽ thay thế toàn bộ ô rỗng (NaN) bằng chuỗi rỗng hợp lệ với JSON
+    # df_to_upload = df.fillna("") 
     
-    # Chuyển DataFrame ngược lại thành List of Lists, bao gồm cả Header
-    final_values = [df_to_upload.columns.tolist()] + df_to_upload.values.tolist()
+    # # Chuyển DataFrame ngược lại thành List of Lists, bao gồm cả Header
+    # final_values = [df_to_upload.columns.tolist()] + df_to_upload.values.tolist()
     
-    try:
-        service.spreadsheets().values().update(
-            spreadsheetId=SPREADSHEET_ID, 
-            range=RANGE_NAME,
-            valueInputOption='RAW', 
-            body={'values': final_values} # Bây giờ payload đã là JSON hợp lệ
-        ).execute()
-        print("✅ Đã cập nhật xong!")
-    except Exception as e:
-        print(f"❌ Lỗi cập nhật Sheets: {e}")
+    # try:
+    #     service.spreadsheets().values().update(
+    #         spreadsheetId=SPREADSHEET_ID, 
+    #         range=RANGE_NAME,
+    #         valueInputOption='RAW', 
+    #         body={'values': final_values} # Bây giờ payload đã là JSON hợp lệ
+    #     ).execute()
+    #     print("✅ Đã cập nhật xong!")
+    # except Exception as e:
+    #     print(f"❌ Lỗi cập nhật Sheets: {e}")
 
     driver.quit()
     print("Đã thoát")
