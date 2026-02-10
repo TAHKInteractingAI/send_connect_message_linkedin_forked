@@ -452,7 +452,7 @@ def send_connection(driver: webdriver.Chrome):
         print("⏳ Bước 3: Đang đợi Modal xuất hiện...")
         #modal = wait.until(EC.presence_of_element_located((By.XPATH, XPATH_MODAL_CONTAINER)))
         time.sleep(3) # Đợi animation của LinkedIn chạy xong
-
+        actions.send_keys(Keys.ENTER).perform()
         # Bước 4: Nhấn Tab 3 lần và Enter
         print("⌨️ Bước 4: Đang thực hiện Tab -> Tab -> Tab -> Enter...")
         
@@ -461,11 +461,14 @@ def send_connection(driver: webdriver.Chrome):
             time.sleep(random.uniform(1, 3)) # Nghỉ random giữa các lần
             print(f"   - Đã nhấn Tab lần {i+1}")
         time.sleep(3)
-        actions.key_down(Keys.ENTER).pause(0.5).key_up(Keys.ENTER).perform()
+        #actions.key_down(Keys.ENTER).pause(0.5).key_up(Keys.ENTER).perform()
+        actions.send_keys(Keys.SPACE).perform()
         print("✅ Bước 5: Đã nhấn Enter để gửi!")
         
         # Đợi 2s xem Modal có biến mất không để xác nhận thành công
-        time.sleep(3)
+        time.sleep(5)
+        # Thoát pop-up verify account
+        actions.send_keys(Keys.ESCAPE).perform()
         return "SUCCESS"
                 
     except Exception as e:
@@ -634,26 +637,26 @@ def main_connect():
             print(f"❌ Lỗi dòng {index + 2}: {e}")
             df.at[index, COL_STATUS] = "ERROR"
 
-    # 4. CẬP NHẬT LẠI GOOGLE SHEETS
-    # print("📤 Đang đồng bộ dữ liệu lên Sheets...")
+    #4. CẬP NHẬT LẠI GOOGLE SHEETS
+    print("📤 Đang đồng bộ dữ liệu lên Sheets...")
     
-    # # Xử lý giá trị NaN trước khi convert thành list
-    # # fillna("") sẽ thay thế toàn bộ ô rỗng (NaN) bằng chuỗi rỗng hợp lệ với JSON
-    # df_to_upload = df.fillna("") 
+    # Xử lý giá trị NaN trước khi convert thành list
+    # fillna("") sẽ thay thế toàn bộ ô rỗng (NaN) bằng chuỗi rỗng hợp lệ với JSON
+    df_to_upload = df.fillna("") 
     
-    # # Chuyển DataFrame ngược lại thành List of Lists, bao gồm cả Header
-    # final_values = [df_to_upload.columns.tolist()] + df_to_upload.values.tolist()
+    # Chuyển DataFrame ngược lại thành List of Lists, bao gồm cả Header
+    final_values = [df_to_upload.columns.tolist()] + df_to_upload.values.tolist()
     
-    # try:
-    #     service.spreadsheets().values().update(
-    #         spreadsheetId=SPREADSHEET_ID, 
-    #         range=RANGE_NAME,
-    #         valueInputOption='RAW', 
-    #         body={'values': final_values} # Bây giờ payload đã là JSON hợp lệ
-    #     ).execute()
-    #     print("✅ Đã cập nhật xong!")
-    # except Exception as e:
-    #     print(f"❌ Lỗi cập nhật Sheets: {e}")
+    try:
+        service.spreadsheets().values().update(
+            spreadsheetId=SPREADSHEET_ID, 
+            range=RANGE_NAME,
+            valueInputOption='RAW', 
+            body={'values': final_values} # Bây giờ payload đã là JSON hợp lệ
+        ).execute()
+        print("✅ Đã cập nhật xong!")
+    except Exception as e:
+        print(f"❌ Lỗi cập nhật Sheets: {e}")
 
     driver.quit()
     print("Đã thoát")
