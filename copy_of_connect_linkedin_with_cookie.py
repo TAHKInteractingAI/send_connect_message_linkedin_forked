@@ -299,68 +299,41 @@ def handle_code_verification(driver: webdriver.Chrome):
         print("INFO: NO VERIFICATION DETECTED!")
 
 def login(driver: webdriver.Chrome, username: str, password: str):
-    """Đăng nhập vào LinkedIn với username và password mới nếu có sự thay đổi"""
-    XPATH_USERNAME = '//*[@id="username"]'
-    XPATH_PASSWORD = '//*[@id="password"]'
-    XPATH_LOGIN_BUTTON = '//button[contains(@class, "btn__primary--large") and @aria-label="Sign in"]'
-
     driver.get("https://www.linkedin.com/login")
-    time.sleep(2)  # Ensure the page is fully loaded
+    time.sleep(5)
 
-    # Kiểm tra nếu có cookies và kiểm tra xem username, password có thay đổi không
-    #credentials = load_credentials()
-
-    if os.path.exists(COOKIES_FILE): #and credentials:
-        # Kiểm tra nếu username hoặc password đã thay đổi
-        #if credentials['username'] == username and credentials['password'] == password:
-            # Tải cookies và thử đăng nhập
-        load_cookies(driver, COOKIES_FILE)
-        driver.get("https://www.linkedin.com/feed")
-        time.sleep(3)
-
-        # Kiểm tra xem đã đăng nhập chưa bằng cách xem có biểu tượng người dùng không
+    # BƯỚC MỚI: Nếu bị đẩy sang trang 'Join' hoặc 'Guest'
+    if "signup" in driver.current_url or "guest" in driver.current_url or "join" in driver.current_url:
+        print("⚠️ Đang ở trang Join LinkedIn, cố gắng tìm nút Sign in...")
         try:
-            user_icon = WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.CLASS_NAME, 'global-nav__me-photo')))
-            print("INFO: Logged in using cookies!")
-            driver.save_screenshot("cookie-login.png")
-            # save user_icon
-            #user_icon.screenshot("user_icon.png")
-            # display_screenshot(driver, "status.png")
-            return
+            # Tìm link "Sign in" ở phía trên hoặc dưới trang
+            login_link = driver.find_element(By.PARTIAL_LINK_TEXT, "Sign in")
+            login_link.click()
+            time.sleep(3)
         except:
-            print("INFO: Cookies không hợp lệ, thử đăng nhập lại...")
-            driver.save_screenshot("cookie-login.png")
+            driver.get("https://www.linkedin.com/login") # Ép quay lại trang login trực tiếp
 
-    # Nếu thông tin đăng nhập đã thay đổi hoặc không có cookies, đăng nhập thủ công
-    driver.get("https://www.linkedin.com/login")
-    username_field = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, XPATH_USERNAME)))
-    password_field = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, XPATH_PASSWORD)))
-    login_button = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, XPATH_LOGIN_BUTTON)))
+    # Điền thông tin đăng nhập (Username/Password)
+    try:
+        username_field = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "username")))
+        password_field = driver.find_element(By.ID, "password")
+        
+        human_type(username_field, username)
+        human_type(password_field, password)
+        driver.find_element(By.XPATH, "//button[@type='submit']").click()
+        
+        print("🚀 Đã điền xong tài khoản, đang chờ màn hình OTP...")
+        time.sleep(10) # Đợi email gửi tới Missive
+        
+        # GỌI HÀM NHẬP MÃ OTP
+        handle_code_verification(driver)
+        
+    except Exception as e:
+        print(f"❌ Không tìm thấy form đăng nhập: {e}")
+        driver.save_screenshot("failed_login_form.png")
 
-    human_type(username_field, username)
-    #username_field.send_keys(username)
-    time.sleep(2)
-    human_type(password_field, password)
-    #password_field.send_keys(password)
-    time.sleep(2)
-    login_button.click()
-
-    time.sleep(15)
-
-    handle_code_verification(driver)
-    handle_cookie_acceptance(driver)
-    # Lưu cookies và thông tin đăng nhập sau khi đăng nhập thành công
+    # Lưu cookies sau khi hoàn tất
     save_cookies(driver)
-    #save_credentials(username, password)
-    print("INFO: Đăng nhập thành công và đã lưu cookies, thông tin đăng nhập!")
-    driver.save_screenshot("post-login.png")
-    # user_icon = WebDriverWait(driver, 10).until(
-    #                 EC.presence_of_element_located((By.CLASS_NAME, 'global-nav__me-photo')))
-    # # save user_icon
-    # user_icon.screenshot("user_icon.png")
-    # display_screenshot(driver, "status.png")
-    # display_full_screenshot(driver)
 
 
 """# **XPATH**"""
