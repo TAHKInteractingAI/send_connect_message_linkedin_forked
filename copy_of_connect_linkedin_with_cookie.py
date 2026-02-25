@@ -48,8 +48,8 @@ load_dotenv()
 
 # --- CONFIG ---
 MISSIVE_API_KEY = os.getenv('MISSIVE_API_KEY')
-headers = {"Authorization": f"Bearer {MISSIVE_API_KEY}", "Content-Type": "application/json"}
-params = {"limmit": 20, "inbox":"true"} 
+HEADERS = {"Authorization": f"Bearer {MISSIVE_API_KEY}", "Content-Type": "application/json"}
+PARAMS = {"limmit": 20, "inbox":"true"} 
 COOKIES_FILE = 'linkedin_cookies.pkl'
 CREDENTIALS_FILE = 'linkedin_credentials.pkl'
 MAX_CONNECTIONS_PER_DAY = 15
