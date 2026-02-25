@@ -283,6 +283,7 @@ def login(driver: webdriver.Chrome, username: str, password: str):
 
     # Nếu thông tin đăng nhập đã thay đổi hoặc không có cookies, đăng nhập thủ công
     driver.get("https://www.linkedin.com/login")
+    driver.save_screenshot("before_input.png")
     username_field = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, XPATH_USERNAME)))
     password_field = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, XPATH_PASSWORD)))
     login_button = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, XPATH_LOGIN_BUTTON)))
@@ -295,7 +296,8 @@ def login(driver: webdriver.Chrome, username: str, password: str):
     time.sleep(2)
     login_button.click()
 
-    time.sleep(15)
+    time.sleep(10)
+    driver.save_screenshot("before_verification.png")
     handle_code_verification(driver)
     handle_cookie_acceptance(driver)
     # Lưu cookies và thông tin đăng nhập sau khi đăng nhập thành công
