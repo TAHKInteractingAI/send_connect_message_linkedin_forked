@@ -495,6 +495,7 @@ def check_connection(driver: webdriver.Chrome, email: str = ""):
         
         # Nếu đã SUCCESS hoặc bị kẹt Modal (FAILED_STUCK_MODAL), thoát luôn
         if res in ["SUCCESS", "FAILED_STUCK_MODAL"]:
+            driver.save_screenshot(f"error_line.png")
             return res
 
         # 3. Chỉ khi bước trên không tìm thấy nút Connect nào mới tìm trong More
