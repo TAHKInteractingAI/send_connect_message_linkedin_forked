@@ -301,6 +301,7 @@ def handle_code_verification(driver: webdriver.Chrome):
 def login(driver: webdriver.Chrome, username: str, password: str):
     driver.get("https://www.linkedin.com/login")
     time.sleep(5)
+    driver.save_screenshot("before_login.png")
 
     # BƯỚC MỚI: Nếu bị đẩy sang trang 'Join' hoặc 'Guest'
     if "signup" in driver.current_url or "guest" in driver.current_url or "join" in driver.current_url:
@@ -326,6 +327,7 @@ def login(driver: webdriver.Chrome, username: str, password: str):
         time.sleep(10) # Đợi email gửi tới Missive
         
         # GỌI HÀM NHẬP MÃ OTP
+        driver.save_screenshot("before_verf.png")
         handle_code_verification(driver)
         
     except Exception as e:
