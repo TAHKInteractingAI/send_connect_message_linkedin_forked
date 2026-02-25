@@ -245,8 +245,9 @@ def handle_code_verification(driver: webdriver.Chrome):
         time.sleep(3)
         submit_button.click()
         time.sleep(5)
-    except:
+    except Exception as e:
         print("INFO: NO VERIFICATION DETECTED!")
+        print(e)
 
 def login(driver: webdriver.Chrome, username: str, password: str):
     """Đăng nhập vào LinkedIn với username và password mới nếu có sự thay đổi"""
