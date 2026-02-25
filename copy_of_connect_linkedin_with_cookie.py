@@ -59,12 +59,16 @@ GOOGLE_CREDS = os.getenv('GOOGLE_APPLICATION_CRED')
 
 """# **HÀM HỖ TRỢ**"""
 def get_missive_linkedin_code():
-    response = requests.get("https://public.missiveapp.com/v1/conversations", headers=headers, params=params)
+    response = requests.get("https://public.missiveapp.com/v1/conversations", headers=HEADERS, params=PARAMS)
     if response.status_code != 200:
         return f"Lỗi API: {response.status_code}"
     conversations = response.json().get("conversations", [])
-    temp = [c for c in conversations if 'name' in c['authors'][0] and c['authors'][0]['name'] == 'LinkedIn']
-    return temp[0]['latest_message_subject'].split(' ')[-1:][0]
+    temp = [c['latest_message_subject'] for c in conversations if 'name' in c['authors'][0] and c['authors'][0]['name'] == 'LinkedIn']
+    final_temp = [f.split(' ')[-1:][0] for f in temp]
+    for item in final_temp:
+        if item.isdigit():
+            return item
+    return None
 
 # def restore_cookie_from_secret():
 #     raw_cookie = os.getenv('RAW_COOKIE_BASE64')
@@ -342,7 +346,7 @@ def login(driver: webdriver.Chrome, username: str, password: str):
     time.sleep(2)
     login_button.click()
 
-    time.sleep(10)
+    time.sleep(15)
 
     handle_code_verification(driver)
     handle_cookie_acceptance(driver)
