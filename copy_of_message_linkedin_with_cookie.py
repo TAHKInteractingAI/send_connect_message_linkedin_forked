@@ -30,8 +30,8 @@ load_dotenv()
 MISSIVE_API_KEY = os.getenv('MISSIVE_API_KEY')
 MAX_MESSAGES_PER_DAY = 15
 COOKIES_FILE = 'linkedin_cookies.pkl'
-headers = {"Authorization": f"Bearer {MISSIVE_API_KEY}", "Content-Type": "application/json"}
-params = {"limmit": 20, "inbox":"true"} 
+HEADERS = {"Authorization": f"Bearer {MISSIVE_API_KEY}", "Content-Type": "application/json"}
+PARAMS = {"limmit": 20, "inbox":"true"} 
 # Thông tin bảng tính
 SPREADSHEET_ID = os.getenv('SPREADSHEET_MESS_ID')
 SHEET_NAME = 'Sheet1'
