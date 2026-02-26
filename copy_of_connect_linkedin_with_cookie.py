@@ -574,9 +574,8 @@ def main_connect():
     if not values:
         print("ERROR: Không có dữ liệu trong Sheet")
         return
-
+    headers = values[0]
     # Đảm bảo tất cả các dòng có số cột bằng với header
-    # headers = values[0]
     # data = []
     # for row in values[1:]:
     #     # Làm đầy các cột thiếu bằng chuỗi rỗng
