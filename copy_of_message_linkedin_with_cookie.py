@@ -619,31 +619,81 @@ def main_mess():
     password = os.getenv("LINKEDIN_PASSWORD")
     login(driver, username, password)
     """# **THỰC HIỆN GỬI KẾT NỐI**"""
+    # send_count = 0
+    # for index, row in df.iterrows():
+    #     if send_count >= MAX_MESSAGES_PER_DAY:
+    #         print(f"INFO: Đã đạt giới hạn {MAX_MESSAGES_PER_DAY} người/ngày")
+    #         break  
+    #     profile_link = row['Link']
+    #     print(f"Processing: {profile_link}")
+    #     datum = check_datum(row)
+    #     if isinstance(datum, str):
+    #         status = datum
+    #     else:
+    #         try:
+    #             driver.get(profile_link)
+    #             random_delay(5, 10) # Tránh bị LinkedIn quét bot
+    #             status = send_message_optimized(driver, row)
+    #             if status == "SUCCESS":
+    #                 send_count += 1
+    #                 status = "MESSAGE_SENT"
+    #                 print(f"-> Gửi thành công đến {row['Name']} ({send_count}/{MAX_MESSAGES_PER_DAY})")
+    #                 driver.save_screenshot(f"success_sent_{send_count}.png")
+    #         except Exception as e:
+    #             status = f"ERROR: {str(e)}"
+    #             print(status)
+    #     # Cập nhật trạng thái vào DataFrame
+    #     df.at[index, 'Status'] = status
+    #     # Nghỉ giữa các lần gửi để tránh bị khóa account
+    #     if send_count < MAX_MESSAGES_PER_DAY:
+    #         random_delay(15, 25)
+
     send_count = 0
+    sent_links = set()  # Tập hợp để theo dõi các link đã gửi trong phiên này
     
     for index, row in df.iterrows():
+        # 1. Kiểm tra giới hạn hàng ngày
         if send_count >= MAX_MESSAGES_PER_DAY:
             print(f"INFO: Đã đạt giới hạn {MAX_MESSAGES_PER_DAY} người/ngày")
             break
             
-        profile_link = row['Link']
+        # 2. Lấy thông tin cơ bản
+        profile_link = str(row.get('Link', '')).strip()
+        name = str(row.get('Name', '')).strip()
+        message = str(row.get('Message', '')).strip()
+
+        # YÊU CẦU 1: Kiểm tra nếu thiếu Name, Link hoặc Message thì bỏ qua
+        if not profile_link or profile_link.lower() == 'nan' or \
+           not name or name.lower() == 'nan' or \
+           not message or message.lower() == 'nan':
+            print(f"SKIP: Dòng {index+3} thiếu thông tin quan trọng (Name/Link/Message).")
+            df.at[index, 'Status'] = "ERROR: MISSING DATA"
+            continue
+
+        # YÊU CẦU 2: Kiểm tra nếu trùng link đã gửi trước đó thì bỏ qua
+        if profile_link in sent_links:
+            print(f"SKIP: Link trùng lặp tại dòng {index+3}: {profile_link}")
+            df.at[index, 'Status'] = "ERROR: DUPLICATE LINK"
+            continue
+
         print(f"Processing: {profile_link}")
         
+        # Kiểm tra đính kèm và format tin nhắn qua hàm check_datum
         datum = check_datum(row)
         if isinstance(datum, str):
             status = datum
         else:
             try:
                 driver.get(profile_link)
-                random_delay(5, 10) # Tránh bị LinkedIn quét bot
+                random_delay(5, 10) 
                 
                 status = send_message_optimized(driver, row)
                 
                 if status == "SUCCESS":
                     send_count += 1
+                    sent_links.add(profile_link) # Lưu link vào danh sách đã gửi
                     status = "MESSAGE_SENT"
-                    print(f"-> Gửi thành công đến {row['Name']} ({send_count}/{MAX_MESSAGES_PER_DAY})")
-                    driver.save_screenshot(f"success_sent_{send_count}.png")
+                    print(f"-> Gửi thành công đến {name} ({send_count}/{MAX_MESSAGES_PER_DAY})")
                 
             except Exception as e:
                 status = f"ERROR: {str(e)}"
@@ -652,8 +702,8 @@ def main_mess():
         # Cập nhật trạng thái vào DataFrame
         df.at[index, 'Status'] = status
         
-        # Nghỉ giữa các lần gửi để tránh bị khóa account
-        if send_count < MAX_MESSAGES_PER_DAY:
+        # Nghỉ giữa các lần gửi nếu vừa gửi thành công
+        if status == "MESSAGE_SENT" and send_count < MAX_MESSAGES_PER_DAY:
             random_delay(15, 25)
     
     # else:
