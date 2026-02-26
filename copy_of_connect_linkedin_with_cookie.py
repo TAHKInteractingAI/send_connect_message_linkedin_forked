@@ -576,13 +576,23 @@ def main_connect():
         return
 
     # Đảm bảo tất cả các dòng có số cột bằng với header
-    headers = values[0]
+    # headers = values[0]
+    # data = []
+    # for row in values[1:]:
+    #     # Làm đầy các cột thiếu bằng chuỗi rỗng
+    #     padded_row = row + [""] * (len(headers) - len(row))
+    #     data.append(padded_row)
+    # ĐẢM BẢO headers có ít nhất 5 cột nếu bạn dùng index 3 và 4
+    required_min_cols = 5 
+    if len(headers) < required_min_cols:
+        headers += [f"Column_{i}" for i in range(len(headers), required_min_cols)]
+
     data = []
     for row in values[1:]:
-        # Làm đầy các cột thiếu bằng chuỗi rỗng
+        # Làm đầy dòng để khớp với số lượng headers mới
         padded_row = row + [""] * (len(headers) - len(row))
         data.append(padded_row)
-    
+        
     df = pd.DataFrame(data, columns=headers)
 
     # 2. KHỞI TẠO DRIVER & ĐĂNG NHẬP
