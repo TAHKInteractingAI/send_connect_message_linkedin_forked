@@ -643,6 +643,7 @@ def main_mess():
                     send_count += 1
                     status = "MESSAGE_SENT"
                     print(f"-> Gửi thành công đến {row['Name']} ({send_count}/{MAX_MESSAGES_PER_DAY})")
+                    driver.save_screenshot(f"success_sent_{send_count}.png")
                 
             except Exception as e:
                 status = f"ERROR: {str(e)}"
