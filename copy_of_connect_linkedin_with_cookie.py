@@ -635,32 +635,44 @@ def main_connect():
             if status in ["SUCCESS", "PENDING", "SUCCESS: CONNECT WITHOUT NOTE!"]:
                 df.at[index, COL_DROPDOWN] = "Đã gửi connect"
                 send_count += 1
+                driver.save_screenshot(f"success_sent_index{index}_count{send_count}.png")
             
             # Nghỉ để tránh bị quét bot
             time.sleep(random.uniform(15, 25))
             
         except Exception as e:
             print(f"❌ Lỗi dòng {index + 2}: {e}")
+            driver.save_screenshot(f"fail_sent_index{index}_count{send_count}.png")
             df.at[index, COL_STATUS] = "ERROR"
 
-    #4. CẬP NHẬT LẠI GOOGLE SHEETS
+    # 4. CẬP NHẬT LẠI GOOGLE SHEETS
     print("📤 Đang đồng bộ dữ liệu lên Sheets...")
     
-    # Xử lý giá trị NaN trước khi convert thành list
-    # fillna("") sẽ thay thế toàn bộ ô rỗng (NaN) bằng chuỗi rỗng hợp lệ với JSON
+    # Thay thế NaN bằng chuỗi rỗng để tránh lỗi JSON
     df_to_upload = df.fillna("") 
     
-    # Chuyển DataFrame ngược lại thành List of Lists, bao gồm cả Header
-    final_values = [df_to_upload.columns.tolist()] + df_to_upload.values.tolist()
+    # Lấy danh sách giá trị (không bao gồm Header để tránh ghi đè làm hỏng format tiêu đề)
+    # Chúng ta chỉ cập nhật từ dòng thứ 2 (A2) trở đi
+    final_values = df_to_upload.values.tolist()
     
+    # Xác định vùng cập nhật chính xác dựa trên kích thước DataFrame
+    # Ví dụ: Sheet1!A2:E10 (Nếu có 5 cột và 9 dòng dữ liệu)
+    num_rows = len(final_values)
+    num_cols = len(df_to_upload.columns)
+    
+    # Chuyển chỉ số cột thành chữ cái (A, B, C...)
+    last_col_letter = chr(ord('A') + num_cols - 1)
+    update_range = f"Sheet1!A2:{last_col_letter}{num_rows + 1}"
+
     try:
+        # Sử dụng phương thức update cho đúng vùng dữ liệu thay vì ghi đè toàn bộ Sheet
         service.spreadsheets().values().update(
             spreadsheetId=SPREADSHEET_ID, 
-            range=RANGE_NAME,
+            range=update_range,
             valueInputOption='RAW', 
-            body={'values': final_values} # Bây giờ payload đã là JSON hợp lệ
+            body={'values': final_values}
         ).execute()
-        print("✅ Đã cập nhật xong!")
+        print(f"✅ Đã cập nhật xong vùng {update_range}!")
     except Exception as e:
         print(f"❌ Lỗi cập nhật Sheets: {e}")
 
