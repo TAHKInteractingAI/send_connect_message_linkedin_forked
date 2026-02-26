@@ -603,9 +603,12 @@ def main_connect():
             break
         
         # Làm sạch dữ liệu để tránh lỗi khoảng trắng
-        current_dropdown = str(row.get(COL_DROPDOWN, "")).strip().lower()
-        current_status_text = str(row.get(COL_STATUS, "")).strip().upper()
-        profile_link = str(row.get('Linkedin', "")).strip()
+        # current_dropdown = str(row.get(COL_DROPDOWN, "")).strip().lower()
+        # current_status_text = str(row.get(COL_STATUS, "")).strip().upper()
+        # profile_link = str(row.get('Linkedin', "")).strip()
+        profile_link = str(row.iloc[0]).strip()
+        current_status_text = str(row.iloc[3]).strip().upper()
+        current_dropdown = str(row.iloc[2]).strip().lower()
 
         # Kiểm tra nếu dòng này rỗng hoàn toàn (không có link) thì bỏ qua
         if not profile_link or "linkedin.com" not in profile_link:
@@ -631,9 +634,11 @@ def main_connect():
             status = check_connection(driver, email_to_fill)
             
             # Cập nhật DataFrame
-            df.at[index, COL_STATUS] = status
+            #df.at[index, COL_STATUS] = status
+            df.iat[index, 3] = status
             if status in ["SUCCESS", "PENDING", "SUCCESS: CONNECT WITHOUT NOTE!"]:
-                df.at[index, COL_DROPDOWN] = "Đã gửi connect"
+                #df.at[index, COL_DROPDOWN] = "Đã gửi connect"
+                df.iat[index, 2] = "Đã gửi connect"
                 send_count += 1
                 driver.save_screenshot(f"success_sent_index{index}_count{send_count}.png")
             
