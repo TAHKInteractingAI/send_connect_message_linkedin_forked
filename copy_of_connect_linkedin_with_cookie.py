@@ -604,7 +604,7 @@ def main_connect():
     login(driver, username, password)
 
     send_count = 0
-    MAX_LIMIT = 15
+    MAX_LIMIT = 20
 
     # 3. VÒNG LẶP XỬ LÝ
     for index, row in df.iterrows():
