@@ -52,7 +52,7 @@ HEADERS = {"Authorization": f"Bearer {MISSIVE_API_KEY}", "Content-Type": "applic
 PARAMS = {"limmit": 20, "inbox":"true"} 
 COOKIES_FILE = 'linkedin_cookies.pkl'
 CREDENTIALS_FILE = 'linkedin_credentials.pkl'
-MAX_CONNECTIONS_PER_DAY = 15
+MAX_LIMIT = 15
 SPREADSHEET_ID = os.getenv('SPREADSHEET_ID')
 RANGE_NAME = "Sheet1!A:E"
 GOOGLE_CREDS = os.getenv('GOOGLE_APPLICATION_CRED')
@@ -604,7 +604,6 @@ def main_connect():
     login(driver, username, password)
 
     send_count = 0
-    MAX_LIMIT = 20
 
     # 3. VÒNG LẶP XỬ LÝ
     for index, row in df.iterrows():
