@@ -658,36 +658,84 @@ def main_connect():
             driver.save_screenshot(f"fail_sent_index{index}_count{send_count}.png")
             df.at[index, COL_STATUS] = "ERROR"
 
-    # 4. CẬP NHẬT LẠI GOOGLE SHEETS
-    print("📤 Đang đồng bộ dữ liệu lên Sheets...")
+    # # 4. CẬP NHẬT LẠI GOOGLE SHEETS
+    # print("📤 Đang đồng bộ dữ liệu lên Sheets...")
     
-    # Thay thế NaN bằng chuỗi rỗng để tránh lỗi JSON
+    # # Thay thế NaN bằng chuỗi rỗng để tránh lỗi JSON
+    # df_to_upload = df.fillna("") 
+    
+    # # Lấy danh sách giá trị (không bao gồm Header để tránh ghi đè làm hỏng format tiêu đề)
+    # # Chúng ta chỉ cập nhật từ dòng thứ 2 (A2) trở đi
+    # final_values = df_to_upload.values.tolist()
+    
+    # # Xác định vùng cập nhật chính xác dựa trên kích thước DataFrame
+    # # Ví dụ: Sheet1!A2:E10 (Nếu có 5 cột và 9 dòng dữ liệu)
+    # num_rows = len(final_values)
+    # num_cols = len(df_to_upload.columns)
+    
+    # # Chuyển chỉ số cột thành chữ cái (A, B, C...)
+    # last_col_letter = chr(ord('A') + num_cols - 1)
+    # update_range = f"Sheet1!A2:{last_col_letter}{num_rows + 1}"
+
+    # try:
+    #     # Sử dụng phương thức update cho đúng vùng dữ liệu thay vì ghi đè toàn bộ Sheet
+    #     service.spreadsheets().values().update(
+    #         spreadsheetId=SPREADSHEET_ID, 
+    #         range=update_range,
+    #         valueInputOption='RAW', 
+    #         body={'values': final_values}
+    #     ).execute()
+    #     print(f"✅ Đã cập nhật xong vùng {update_range}!")
+    # except Exception as e:
+    #     print(f"❌ Lỗi cập nhật Sheets: {e}")
+
+    # 4. CẬP NHẬT LẠI GOOGLE SHEETS DÙNG BATCH UPDATE
+    print("📤 Đang chuẩn bị dữ liệu Batch Update...")
+    
     df_to_upload = df.fillna("") 
-    
-    # Lấy danh sách giá trị (không bao gồm Header để tránh ghi đè làm hỏng format tiêu đề)
-    # Chúng ta chỉ cập nhật từ dòng thứ 2 (A2) trở đi
     final_values = df_to_upload.values.tolist()
     
-    # Xác định vùng cập nhật chính xác dựa trên kích thước DataFrame
-    # Ví dụ: Sheet1!A2:E10 (Nếu có 5 cột và 9 dòng dữ liệu)
     num_rows = len(final_values)
     num_cols = len(df_to_upload.columns)
-    
-    # Chuyển chỉ số cột thành chữ cái (A, B, C...)
     last_col_letter = chr(ord('A') + num_cols - 1)
+    
+    # Định nghĩa vùng dữ liệu (Data Range)
     update_range = f"Sheet1!A2:{last_col_letter}{num_rows + 1}"
 
-    try:
-        # Sử dụng phương thức update cho đúng vùng dữ liệu thay vì ghi đè toàn bộ Sheet
-        service.spreadsheets().values().update(
-            spreadsheetId=SPREADSHEET_ID, 
-            range=update_range,
-            valueInputOption='RAW', 
-            body={'values': final_values}
-        ).execute()
-        print(f"✅ Đã cập nhật xong vùng {update_range}!")
-    except Exception as e:
-        print(f"❌ Lỗi cập nhật Sheets: {e}")
+    # Cấu trúc body cho batchUpdate
+    batch_update_values_request_body = {
+        'valueInputOption': 'RAW',
+        'data': [
+            {
+                'range': update_range,
+                'values': final_values
+            }
+        ]
+    }
 
+    try:
+        # Sử dụng batchUpdate thay vì update thông thường
+        service.spreadsheets().values().batchUpdate(
+            spreadsheetId=SPREADSHEET_ID,
+            body=batch_update_values_request_body
+        ).execute()
+        print(f"✅ Batch Update thành công vùng {update_range}!")
+    except Exception as e:
+        print(f"❌ Lỗi Batch Update: {e}")
+        # Backup plan: Nếu batch vẫn lỗi SSL, chia nhỏ để gửi (Chunking)
+        print("🔄 Đang thử gửi lại theo phương thức Chia nhỏ (Chunking)...")
+        chunk_size = 5
+        for i in range(0, len(final_values), chunk_size):
+            chunk = final_values[i : i + chunk_size]
+            r_start = i + 2
+            r_end = r_start + len(chunk) - 1
+            c_range = f"Sheet1!A{r_start}:{last_col_letter}{r_end}"
+            service.spreadsheets().values().update(
+                spreadsheetId=SPREADSHEET_ID,
+                range=c_range,
+                valueInputOption='RAW',
+                body={'values': chunk}
+            ).execute()
+            
     driver.quit()
     print("Đã thoát")
