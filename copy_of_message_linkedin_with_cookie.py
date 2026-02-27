@@ -28,7 +28,7 @@ load_dotenv()
 
 """# **CONFIG**"""
 MISSIVE_API_KEY = os.getenv('MISSIVE_API_KEY')
-MAX_MESSAGES_PER_DAY = 15
+MAX_MESSAGES_PER_DAY = 20
 COOKIES_FILE = 'linkedin_cookies.pkl'
 HEADERS = {"Authorization": f"Bearer {MISSIVE_API_KEY}", "Content-Type": "application/json"}
 PARAMS = {"limmit": 20, "inbox":"true"} 
