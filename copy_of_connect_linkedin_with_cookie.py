@@ -69,7 +69,24 @@ def get_missive_linkedin_code():
         if item.isdigit():
             return item
     return None
-
+def handle_modal_sequence(driver):
+    """Hàm hỗ trợ xử lý nhấn Tab và Space để gửi kết nối trong Modal"""
+    try:
+        time.sleep(3) # Đợi animation của LinkedIn
+        actions = webdriver.ActionChains(driver)
+        print("⌨️ Đang thực hiện Tab -> Tab -> Tab -> Space...")
+        
+        for i in range(3):
+            actions.send_keys(Keys.TAB).perform()
+            time.sleep(random.uniform(0.5, 1.0))
+            
+        actions.send_keys(Keys.SPACE).perform()
+        print("✅ Đã gửi yêu cầu kết nối thành công!")
+        time.sleep(2)
+        return "SUCCESS"
+    except Exception as e:
+        print(f"❌ Lỗi khi xử lý Modal: {e}")
+        return "FAILED_STUCK_MODAL"
 # def restore_cookie_from_secret():
 #     raw_cookie = os.getenv('RAW_COOKIE_BASE64')
 #     # Chỉ tạo file nếu chưa có (để ưu tiên cache của GitHub)
@@ -442,90 +459,158 @@ def find_element_in_list(driver: webdriver.Chrome, e_list: list[str]):
         except Exception as e:
             print(f"An error occurred: {e}")
     return None
-
 def send_connection(driver: webdriver.Chrome):
+    wait = WebDriverWait(driver, 7)
+    actions = webdriver.ActionChains(driver)
+    
     try:
-        wait = WebDriverWait(driver, 10)
-        actions = webdriver.ActionChains(driver)
-        # Bước 1 & 2: Click nút Connect chính (Giữ nguyên vì đã chạy tốt)
-        xpath_connect = "//main//a[contains(., 'Connect')] | //main//button[contains(., 'Connect')]"
-        connect_btn = wait.until(EC.element_to_be_clickable((By.XPATH, xpath_connect)))
-        driver.execute_script("arguments[0].click();", connect_btn)
-        print("🖱️ Bước 2: Đã Click nút Connect.")
+        # --- BƯỚC 1: TÌM NÚT CONNECT CHÍNH DIỆN ---
+        xpath_main_connect = "//main//button[contains(., 'Connect')] | //main//a[contains(., 'Connect')]"
+        try:
+            connect_btn = driver.find_element(By.XPATH, xpath_main_connect)
+            if connect_btn.is_displayed():
+                driver.execute_script("arguments.click();", connect_btn)
+                print("🖱️ Đã tìm thấy và click nút Connect chính diện.")
+                return handle_modal_sequence(driver)
+        except NoSuchElementException:
+            print("🔍 Không thấy nút Connect chính diện, đang kiểm tra trong 'More'...")
 
-        # Bước 3: Đợi Modal Container xuất hiện thực sự
-        print("⏳ Bước 3: Đang đợi Modal xuất hiện...")
-        #modal = wait.until(EC.presence_of_element_located((By.XPATH, XPATH_MODAL_CONTAINER)))
-        time.sleep(3) # Đợi animation của LinkedIn chạy xong
-        actions.send_keys(Keys.ENTER).perform()
-        # Bước 4: Nhấn Tab 3 lần và Enter
-        print("⌨️ Bước 4: Đang thực hiện Tab -> Tab -> Tab -> Enter...")
-        
-        for i in range(3):
-            actions.send_keys(Keys.TAB).perform()
-            time.sleep(random.uniform(1, 3)) # Nghỉ random giữa các lần
-            print(f"   - Đã nhấn Tab lần {i+1}")
-        time.sleep(3)
-        #actions.key_down(Keys.ENTER).pause(0.5).key_up(Keys.ENTER).perform()
-        actions.send_keys(Keys.SPACE).perform()
-        print("✅ Bước 5: Đã nhấn Enter để gửi!")
-        
-        # Đợi 2s xem Modal có biến mất không để xác nhận thành công
-        time.sleep(5)
-        # Thoát pop-up verify account
-        actions.send_keys(Keys.ESCAPE).perform()
-        return "SUCCESS"
-                
+        # --- BƯỚC 2: TÌM TRONG NÚT MORE ---
+        xpath_more_btn = "//main//button[contains(@aria-label, 'More actions') or contains(@aria-label, 'More...') or contains(., 'More')]"
+        try:
+            more_btn = wait.until(EC.element_to_be_clickable((By.XPATH, xpath_more_btn)))
+            driver.execute_script("arguments.click();", more_btn)
+            print("🖱️ Đã click vào nút 'More'.")
+            time.sleep(2) # Chờ menu dropdown hiện ra
+
+            # Tìm nút Connect bên trong dropdown
+            xpath_inner_connect = "//div[@role='button'][contains(., 'Connect')] | //span[text()='Connect']/parent::div"
+            inner_connect = wait.until(EC.element_to_be_clickable((By.XPATH, xpath_inner_connect)))
+            driver.execute_script("arguments.click();", inner_connect)
+            print("🖱️ Đã click nút Connect bên trong menu More.")
+            
+            return handle_modal_sequence(driver)
+            
+        except (NoSuchElementException, TimeoutException):
+            print("⚠️ Không tìm thấy nút Connect trong mục More hoặc nút More không tồn tại.")
+            return "NOT_FOUND"
+
     except Exception as e:
-        print(f"❌ Lỗi tại send_connection: {str(e)}")
-        # Nếu bị kẹt, nhấn ESC để thoát Modal cho dòng tiếp theo
-        webdriver.ActionChains(driver).send_keys(Keys.ESCAPE).perform()
-        return "FAILED_STUCK_MODAL"
+        print(f"❌ Lỗi tổng quát tại send_connection: {str(e)}")
+        actions.send_keys(Keys.ESCAPE).perform() # Thoát khỏi các trạng thái kẹt
+        return "ERROR"
+# def send_connection(driver: webdriver.Chrome):
+#     try:
+#         wait = WebDriverWait(driver, 10)
+#         actions = webdriver.ActionChains(driver)
+#         # Bước 1 & 2: Click nút Connect chính (Giữ nguyên vì đã chạy tốt)
+#         xpath_connect = "//main//a[contains(., 'Connect')] | //main//button[contains(., 'Connect')]"
+#         connect_btn = wait.until(EC.element_to_be_clickable((By.XPATH, xpath_connect)))
+#         driver.execute_script("arguments[0].click();", connect_btn)
+#         print("🖱️ Bước 2: Đã Click nút Connect.")
+
+#         # Bước 3: Đợi Modal Container xuất hiện thực sự
+#         print("⏳ Bước 3: Đang đợi Modal xuất hiện...")
+#         #modal = wait.until(EC.presence_of_element_located((By.XPATH, XPATH_MODAL_CONTAINER)))
+#         time.sleep(3) # Đợi animation của LinkedIn chạy xong
+#         actions.send_keys(Keys.ENTER).perform()
+#         # Bước 4: Nhấn Tab 3 lần và Enter
+#         print("⌨️ Bước 4: Đang thực hiện Tab -> Tab -> Tab -> Enter...")
+        
+#         for i in range(3):
+#             actions.send_keys(Keys.TAB).perform()
+#             time.sleep(random.uniform(1, 3)) # Nghỉ random giữa các lần
+#             print(f"   - Đã nhấn Tab lần {i+1}")
+#         time.sleep(3)
+#         #actions.key_down(Keys.ENTER).pause(0.5).key_up(Keys.ENTER).perform()
+#         actions.send_keys(Keys.SPACE).perform()
+#         print("✅ Bước 5: Đã nhấn Enter để gửi!")
+        
+#         # Đợi 2s xem Modal có biến mất không để xác nhận thành công
+#         time.sleep(5)
+#         # Thoát pop-up verify account
+#         actions.send_keys(Keys.ESCAPE).perform()
+#         return "SUCCESS"
+                
+#     except Exception as e:
+#         print(f"❌ Lỗi tại send_connection: {str(e)}")
+#         # Nếu bị kẹt, nhấn ESC để thoát Modal cho dòng tiếp theo
+#         webdriver.ActionChains(driver).send_keys(Keys.ESCAPE).perform()
+#         return "FAILED_STUCK_MODAL"
 
 def check_connection(driver: webdriver.Chrome, email: str = ""):
+    """Hàm kiểm tra trạng thái tổng quát"""
     try:
         main_area = driver.find_element(By.TAG_NAME, "main")
         main_text = main_area.text
         
-        # 1. Check xem đã gửi chưa (Pending)
+        # 1. Kiểm tra nếu đang ở trạng thái chờ (Pending)
         if "Pending" in main_text or "Withdraw" in main_text:
             return "PENDING"
-
-        # 2. Thử gửi qua nút Connect chính diện
-        res = send_connection(driver)
         
-        # Nếu đã SUCCESS hoặc bị kẹt Modal (FAILED_STUCK_MODAL), thoát luôn
-        if res in ["SUCCESS", "FAILED_STUCK_MODAL"]:
-            driver.save_screenshot(f"error_line.png")
-            return res
-
-        # 3. Chỉ khi bước trên không tìm thấy nút Connect nào mới tìm trong More
-        print("🔍 Không thấy nút Connect chính diện, đang tìm trong 'More'...")
-        try:
-            more_btn = driver.find_element(By.XPATH, XPATH_MORE_BTN_MAIN)
-            driver.execute_script("arguments[0].click();", more_btn)
-            time.sleep(2)
-            
-            connect_opt = driver.find_element(By.XPATH, "//div[@role='button'][contains(., 'Connect')]")
-            driver.execute_script("arguments[0].click();", connect_opt)
-            
-            # Sau khi bấm Connect trong More, nó lại hiện Modal, dùng lại chiêu Tab + Enter
-            time.sleep(2)
-            actions = webdriver.ActionChains(driver)
-            for _ in range(3):
-                actions.send_keys(Keys.TAB).perform()
-                time.sleep(0.5)
-            actions.send_keys(Keys.ENTER).perform()
+        # 2. Kiểm tra nếu đã kết nối (Có nút Message)
+        if "Message" in main_text and "Connect" not in main_text:
+             # Nếu có chữ Message mà không có nút Connect bên ngoài, 
+             # khả năng cao là đã kết nối hoặc nút Connect bị giấu rất kỹ
+             print("ℹ️ Có vẻ đã là bạn bè (thấy nút Message).")
+             # Đừng return ngay, hãy để send_connection kiểm tra More một lần nữa cho chắc
+        
+        # 3. Thực hiện gửi kết nối
+        result = send_connection(driver)
+        
+        if result == "SUCCESS":
             return "SUCCESS"
-        except:
-            pass
-
-        if "Message" in main_text:
+        elif result == "NOT_FOUND" and "Message" in main_text:
             return "CONNECTED"
-
-        return "UNKNOWN"
+            
+        return result
     except Exception as e:
-        return f"ERROR: {str(e)[:20]}"
+        return f"ERROR: {str(e)[:30]}"
+
+# def check_connection(driver: webdriver.Chrome, email: str = ""):
+#     try:
+#         main_area = driver.find_element(By.TAG_NAME, "main")
+#         main_text = main_area.text
+        
+#         # 1. Check xem đã gửi chưa (Pending)
+#         if "Pending" in main_text or "Withdraw" in main_text:
+#             return "PENDING"
+
+#         # 2. Thử gửi qua nút Connect chính diện
+#         res = send_connection(driver)
+        
+#         # Nếu đã SUCCESS hoặc bị kẹt Modal (FAILED_STUCK_MODAL), thoát luôn
+#         if res in ["SUCCESS", "FAILED_STUCK_MODAL"]:
+#             driver.save_screenshot(f"error_line.png")
+#             return res
+
+#         # 3. Chỉ khi bước trên không tìm thấy nút Connect nào mới tìm trong More
+#         print("🔍 Không thấy nút Connect chính diện, đang tìm trong 'More'...")
+#         try:
+#             more_btn = driver.find_element(By.XPATH, XPATH_MORE_BTN_MAIN)
+#             driver.execute_script("arguments[0].click();", more_btn)
+#             time.sleep(2)
+            
+#             connect_opt = driver.find_element(By.XPATH, "//div[@role='button'][contains(., 'Connect')]")
+#             driver.execute_script("arguments[0].click();", connect_opt)
+            
+#             # Sau khi bấm Connect trong More, nó lại hiện Modal, dùng lại chiêu Tab + Enter
+#             time.sleep(2)
+#             actions = webdriver.ActionChains(driver)
+#             for _ in range(3):
+#                 actions.send_keys(Keys.TAB).perform()
+#                 time.sleep(0.5)
+#             actions.send_keys(Keys.ENTER).perform()
+#             return "SUCCESS"
+#         except:
+#             pass
+
+#         if "Message" in main_text:
+#             return "CONNECTED"
+
+#         return "UNKNOWN"
+#     except Exception as e:
+#         return f"ERROR: {str(e)[:20]}"
 # def check_connection(driver: webdriver.Chrome, email: str, note: str = None):
 #     try:
 #         # 1. Kiểm tra nếu đã là bạn bè (Có nút Message/Follow)
