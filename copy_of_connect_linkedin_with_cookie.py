@@ -49,7 +49,7 @@ load_dotenv()
 # --- CONFIG ---
 MISSIVE_API_KEY = os.getenv('MISSIVE_API_KEY')
 HEADERS = {"Authorization": f"Bearer {MISSIVE_API_KEY}", "Content-Type": "application/json"}
-PARAMS = {"limmit": 20, "inbox":"true"} 
+PARAMS = {"limit": 20, "inbox":"true"} 
 COOKIES_FILE = 'linkedin_cookies.pkl'
 CREDENTIALS_FILE = 'linkedin_credentials.pkl'
 MAX_LIMIT = 15
