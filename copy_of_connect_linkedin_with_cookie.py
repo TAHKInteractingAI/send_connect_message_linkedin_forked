@@ -139,7 +139,7 @@ def get_driver():
     options.add_argument('--no-sandbox')
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument('--disable-gpu')
-    options.add_argument('--headless=new')
+    #options.add_argument('--headless=new')
     options.add_argument("--window-size=1920,1200")
     
     # 3. CHỐNG PHÁT HIỆN BOT (Stealth Mode)
@@ -449,6 +449,15 @@ def send_connection(driver: webdriver.Chrome):
         # Bước 1 & 2: Click nút Connect chính (Giữ nguyên vì đã chạy tốt)
         xpath_connect = "//main//a[contains(., 'Connect')] | //main//button[contains(., 'Connect')]"
         connect_btn = wait.until(EC.element_to_be_clickable((By.XPATH, xpath_connect)))
+        print(f"tìm được từ ngoài: {connect_btn}")
+        if not connect_btn: #Nếu không tìm thấy nút connect bên ngoài
+            more_btn = wait.until(EC.element_to_be_clickable((By.XPATH, XPATH_MORE_BTN_MAIN)))
+            driver.execute_script("arguments[0].click();", more_btn)
+            print("Đã ấn nút More")
+            time.sleep(2)
+            connect_btn = wait.until(EC.element_to_be_clickable((By.XPATH, "//div[@role='button'][contains(., 'Connect')]")))
+            print(f"tìm được từ trong: {connect_btn}")
+            
         driver.execute_script("arguments[0].click();", connect_btn)
         print("🖱️ Bước 2: Đã Click nút Connect.")
 
@@ -479,52 +488,34 @@ def send_connection(driver: webdriver.Chrome):
         print(f"❌ Lỗi tại send_connection: {str(e)}")
         # Nếu bị kẹt, nhấn ESC để thoát Modal cho dòng tiếp theo
         webdriver.ActionChains(driver).send_keys(Keys.ESCAPE).perform()
-        return "FAILED_STUCK_MODAL"
+        return "FAILED"
 
 def check_connection(driver: webdriver.Chrome, email: str = ""):
     try:
-        main_area = driver.find_element(By.TAG_NAME, "main")
-        main_text = main_area.text
-        
+        # main_area = driver.find_element(By.TAG_NAME, "main")
+        # main_text = main_area.text
+        pending_btn = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, "/html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/div/section/div/div/div[2]/div[3]/div/div/div[2]/div/div/button/span/span")))
+        print(f"pending_btn: {pending_btn}")
         # 1. Check xem đã gửi chưa (Pending)
-        if "Pending" in main_text or "Withdraw" in main_text:
+        # if "Pending" in main_text or "Withdraw" in main_text:
+        #     return "PENDING"
+        if pending_btn and ("Pending" in pending_btn.text or "Withdraw" in pending_btn.text):
             return "PENDING"
 
         # 2. Thử gửi qua nút Connect chính diện
         res = send_connection(driver)
         
         # Nếu đã SUCCESS hoặc bị kẹt Modal (FAILED_STUCK_MODAL), thoát luôn
-        if res in ["SUCCESS", "FAILED_STUCK_MODAL"]:
-            driver.save_screenshot(f"error_line.png")
+        if res in ["SUCCESS", "FAILED"]:
+            driver.save_screenshot(f"final.png")
             return res
 
-        # 3. Chỉ khi bước trên không tìm thấy nút Connect nào mới tìm trong More
-        print("🔍 Không thấy nút Connect chính diện, đang tìm trong 'More'...")
-        try:
-            more_btn = driver.find_element(By.XPATH, XPATH_MORE_BTN_MAIN)
-            driver.execute_script("arguments[0].click();", more_btn)
-            time.sleep(2)
-            
-            connect_opt = driver.find_element(By.XPATH, "//div[@role='button'][contains(., 'Connect')]")
-            driver.execute_script("arguments[0].click();", connect_opt)
-            
-            # Sau khi bấm Connect trong More, nó lại hiện Modal, dùng lại chiêu Tab + Enter
-            time.sleep(2)
-            actions = webdriver.ActionChains(driver)
-            for _ in range(3):
-                actions.send_keys(Keys.TAB).perform()
-                time.sleep(0.5)
-            actions.send_keys(Keys.ENTER).perform()
-            return "SUCCESS"
-        except:
-            pass
-
-        if "Message" in main_text:
-            return "CONNECTED"
+        # if "Message" in main_text:
+        #     return "CONNECTED"
 
         return "UNKNOWN"
     except Exception as e:
-        return f"ERROR: {str(e)[:20]}"
+        return f"ERROR: {str(e)}"
         
 # def check_connection(driver: webdriver.Chrome, email: str, note: str = None):
 #     try:
