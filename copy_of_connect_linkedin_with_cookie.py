@@ -455,7 +455,7 @@ def send_connection(driver: webdriver.Chrome):
             driver.execute_script("arguments[0].click();", more_btn)
             print("Đã ấn nút More")
             time.sleep(2)
-            connect_btn = wait.until(EC.element_to_be_clickable((By.XPATH, "//div[@role='button'][contains(., 'Connect')]")))
+            connect_btn = wait.until(EC.element_to_be_clickable((By.XPATH, XPATH_MORE_CONNECT)))
             print(f"tìm được từ trong: {connect_btn}")
             
         driver.execute_script("arguments[0].click();", connect_btn)
