@@ -546,7 +546,7 @@ def send_connection(driver: webdriver.Chrome):
         
         time.sleep(2)
         actions.send_keys(Keys.ESCAPE).perform()
-        return "PENDING"
+        return "START PENDING"
                 
     except Exception as e:
         print(f"❌ Lỗi tại send_connection: {str(e)}")
@@ -562,7 +562,7 @@ def check_connection(driver: webdriver.Chrome, email: str = ""):
         #1 Check có nút Pending 
         if len(pending_elements) > 0:
             print("Trạng thái: Đang chờ xác nhận (Pending).")
-            return "PENDING"
+            return "ALREADY PENDED"
         #2 Check nút Connected ngoài
         connected_main = driver.find_elements(By.XPATH, XPATH_CONNECTED_MAIN)
         if len(connected_main) > 0:
@@ -719,7 +719,7 @@ def main_connect():
             # Cập nhật DataFrame
             #df.at[index, COL_STATUS] = status
             df.iat[index, 3] = status
-            if status in ["SUCCESS", "PENDING", "SUCCESS: CONNECT WITHOUT NOTE!", "CONNECTED"]:
+            if status in ["SUCCESS", "START PENDING", "SUCCESS: CONNECT WITHOUT NOTE!", "PENDING"]:
                 #df.at[index, COL_DROPDOWN] = "Đã gửi connect"
                 df.iat[index, 2] = "Đã gửi connect"
                 send_count += 1
