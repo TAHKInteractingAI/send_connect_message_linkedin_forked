@@ -355,18 +355,14 @@ def login_with_cookie(driver):
 """# **XPATH**"""
 
 # XPATH ỨNG VỚI NÚT MESSAGE.
-#BUTTON_MESSAGE = "/html/body/div[5]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[1]/button"
-#BUTTON_MESSAGE = "/html/body/div[6]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[1]/button"
-BUTTON_MESSAGE = "/html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/section/div/div/div[2]/div[3]/div/div/div/a"
+BUTTON_MESSAGE = "/html/body/div[6]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[1]/button" #Đổi sang full XPATH (dễ lỗi hơn nếu có updated từ linkedin)
 # XPATH ỨNG VỚI KHUNG TIN NHẮN. (CLASS NAME)
 FIELD_MESSAGE = "msg-form__contenteditable"
 # XPATH ỨNG VỚI KHUNG ĐÍNH KÈM TỆP. (CLASS NAME)
 FIELD_ATTACHMENT = "msg-form__attachment-upload-input"
 # XPATH ỨNG VỚI NÚT GỬI TIN NHẮN. (CLASS NAME)
 BUTTON_SUBMIT_MESSAGE = "msg-form__send-button"
-#BUTTON_SUBMIT_MESSAGE = "/html/body/div[5]/div[4]/aside[1]/div[2]/div[1]/div[2]/div/form/footer/div[2]/div[1]/button"
 # XPATH ỨNG VỚI NÚT ĐÓNG HỘP THOẠI NHẮN TIN.
-#BUTTON_CLOSE_MESSAGE = "/html/body/div[5]/div[4]/aside[1]/div[2]/div[1]/header/div[4]/button[3]"
 BUTTON_CLOSE_MESSAGE = "/html/body/div[6]/div[4]/aside[1]/div[2]/div[1]/header/div[4]/button[3]"
 
 # XPATH cập nhật (LinkedIn thường xuyên đổi ID nên dùng Class hoặc Text ổn định hơn)
@@ -515,10 +511,18 @@ def send_message_optimized(driver, row):
             msg_btn = WebDriverWait(driver, 10).until(
                EC.element_to_be_clickable((By.XPATH, BUTTON_MESSAGE))
             )
+            print(f"Tìm thấy nút msg: {msg_btn}")
             msg_btn.click()
         except:
             return "ERROR: MESSAGE BUTTON NOT FOUND"
-        time.sleep(2)
+        time.sleep(3)
+        # premium_buy_button = "//a[contains(@class, 'artdeco-button') and contains(., 'Premium')]"
+        # try:
+        #     WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, premium_buy_button)))
+        #     print("Đã tìm thấy nút Premium")
+        #     return "PREMIUM_FOUND"
+        # except TimeoutException:
+        #     print("Nút Premium không khả dụng")
         print("Message button found, ready to type input")
         # NHẬP NỘI DUNG
         # msg_box = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, FIELD_MESSAGE_CLASS)))
@@ -703,7 +707,8 @@ def main_mess():
         # Nghỉ giữa các lần gửi nếu vừa gửi thành công
         if status == "MESSAGE_SENT" and send_count < MAX_MESSAGES_PER_DAY:
             random_delay(15, 25)
-    
+        else:
+            random_delay(3,5) # Nếu không gửi được, vẫn nên delay để tránh bị quét bot
     # else:
     #     print("CRITICAL: Không thể tiến hành gửi tin nhắn vì đăng nhập thất bại.")
     #CẬP NHẬT TRẠNG THÁI LÊN GOOGLE SHEETS.
