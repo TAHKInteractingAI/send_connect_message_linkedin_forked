@@ -72,15 +72,15 @@ def get_data_with_links(sheet):
     if len(all_values) < 2:
         return pd.DataFrame()
 
-    headers = all_values[1]  # Dòng 2 (index 1) là header
-    data_rows = all_values[2:] # Dữ liệu thực tế từ dòng 3
+    headers = all_values[0]  # Dòng 2 (index 1) là header
+    data_rows = all_values[1:] # Dữ liệu thực tế từ dòng 2
     num_rows = len(data_rows)
 
     # 2. Lấy metadata của cột E (Attachment) - Giả sử là cột số 5
     # Chỉ lấy đúng phạm vi tương ứng với số dòng dữ liệu đang có
     spreadsheet = sheet.spreadsheet
     sheet_name = sheet.title
-    range_metadata = f"{sheet_name}!E3:E{2 + num_rows}"
+    range_metadata = f"{sheet_name}!E2:E{1 + num_rows}"
     
     res_metadata = spreadsheet.fetch_sheet_metadata({
         'includeGridData': True,
@@ -663,10 +663,8 @@ def main_mess():
         message = str(row.get('Message', '')).strip()
 
         # YÊU CẦU 1: Kiểm tra nếu thiếu Name, Link hoặc Message thì bỏ qua
-        if not profile_link or profile_link.lower() == 'nan' or \
-           not name or name.lower() == 'nan' or \
-           not message or message.lower() == 'nan':
-            print(f"SKIP: Dòng {index+3} thiếu thông tin quan trọng (Name/Link/Message).")
+        if pd.isna(profile_link) or str(profile_link).strip() == "" or pd.isna(name) or str(name).strip() == "" or pd.isna(message) or str(message).strip() == "":
+            print(f"SKIP: Dòng {index+2} thiếu thông tin.") # Dòng thực tế = index + 2
             df.at[index, 'Status'] = "ERROR: MISSING DATA"
             continue
 
@@ -711,7 +709,7 @@ def main_mess():
     #CẬP NHẬT TRẠNG THÁI LÊN GOOGLE SHEETS.
     try:
         status_list = df[['Status']].values.tolist()
-        start_row = 3
+        start_row = 2
         end_row = start_row + len(status_list) - 1
         status_range = f"C{start_row}:C{end_row}"
         #updated_values = [df.columns.tolist()] + df.values.tolist()
