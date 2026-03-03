@@ -139,7 +139,7 @@ def get_driver():
     options.add_argument('--no-sandbox')
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument('--disable-gpu')
-    options.add_argument('--headless=new')
+    #options.add_argument('--headless=new')
     options.add_argument("--window-size=1920,1200")
     
     # 3. CHỐNG PHÁT HIỆN BOT (Stealth Mode)
@@ -367,18 +367,21 @@ def login(driver: webdriver.Chrome, username: str, password: str):
 """# **XPATH**"""
 
 # XPATH ỨNG VỚI NÚT CONNECT.
-#STATUS_CONNECT = "/html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/section/div/div/div[2]/div[3]/div/div/div[1]/div/div/a"
 XPATH_MAIN_CONNECT = "//main//a[contains(@aria-label, 'Invite') or contains(@aria-label, 'Connect')]"
 
 # XPATH ỨNG VỚI NÚT MESSAGE.
 STATUS_MESSAGE = "/html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/div/section/div/div/div[2]/div[3]/div/div/div[1]/a"#"/html/body/div/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[1]/button"
 # XPATH ỨNG VỚI NÚT MORE.
-#BUTTON_MORE = "//button[contains(@aria-label, 'More')]"#"/html/body/div/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[2]/button"
-XPATH_MORE_BTN_MAIN = "//main//button[contains(@aria-label, 'More actions') or contains(@aria-label, 'More...')]"
+XPATH_MORE_BTN_MAIN = "//main//button[contains(@aria-label, 'More')]"
 
 # XPATH ỨNG VỚI NÚT UNCONNECT KHI NHẤN NÚT MORE.
-#MORE_CONNECT = "/html/body/div/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[2]/div/div/ul/li[3]/div"
-XPATH_MORE_CONNECT = "//div[contains(@class, 'artdeco-dropdown__content')]//div[@role='button'][contains(., 'Connect') or contains(@aria-label, 'Connect')]"
+XPATH_MORE_CONNECT = "/html/body/div[2]/div/div/div[3]/div/div/a" #Đổi sang full XPATH (dễ lỗi hơn nếu có updated từ linkedin)
+
+# XPATH để tìm nút Connected hoặc trạng thái đã kết nối ở màn hình chính
+XPATH_CONNECTED_MAIN = "//main//button[contains(., 'Connected')] | //main//div[contains(@aria-label, 'Connected')]"
+
+# XPATH tìm nút Remove Connection bên trong menu More
+XPATH_MORE_REMOVE_CONNECTION = "/html/body/div[2]/div/div/div[6]/div/div/div/div/div/p"
 
 # XPATH ỨNG VỚI NÚT ADD A NOTE.
 BUTTON_ADD_NOTE = "/html/body/div[3]/div/div/div[3]/button[1]"
@@ -393,10 +396,8 @@ BUTTON_SEND_NOTE = [
     "/html/body/div[3]/div/div/div[3]/button[3]"                # PREMIUM ACCOUNT.
 ]
 # XPATH ỨNG VỚI NÚT GỬI CONNECT MÀ KHÔNG DÙNG NOTE.
-#XPATH_SEND_WITHOUT_NOTE = "//button[contains(@aria-label, 'Send without a note')]"
 XPATH_SEND_WITHOUT_NOTE = ".//button[contains(@aria-label, 'without a note')]"#"//button[contains(., 'Send without a note') or contains(@aria-label, 'Send without a note') or contains(., 'Send now')]"
 XPATH_SEND_BACKUP = ".//span[contains(normalize-space(), 'without a note')]/parent::button"
-#XPATH_SEND_WITHOUT_NOTE = "/html/body/div/div[4]//div/div[1]/div/div/div[3]/button[2]"
 # XPATH ỨNG VỚI NÚT GỬI CONNECT MÀ DÙNG NOTE.
 TEXTFIELD_VERIFY_NOTE = "/html/body/div[3]/div/div/div[2]/label/input"
 # XPATH để nhận diện xem Modal "Add a note" có đang hiển thị hay không
@@ -520,9 +521,11 @@ def send_connection(driver: webdriver.Chrome):
             try:
                 more_btn = wait.until(EC.element_to_be_clickable((By.XPATH, XPATH_MORE_BTN_MAIN)))
                 driver.execute_script("arguments[0].click();", more_btn) #Thay đổi thành arguments[0]
+                print("Đã ấn More")
                 time.sleep(2)
+                print(f"Start finding {XPATH_MORE_CONNECT}")
                 connect_btn = wait.until(EC.element_to_be_clickable((By.XPATH, XPATH_MORE_CONNECT)))
-                print(f"✅ Tìm thấy nút Connect trong More")
+                print(f"✅ Tìm thấy nút Connect trong More: {connect_btn.text}")
             except TimeoutException:
                 print("❌ Không tìm thấy nút Connect ở bất cứ đâu.")
                 return "FAILED"
@@ -543,7 +546,7 @@ def send_connection(driver: webdriver.Chrome):
         
         time.sleep(2)
         actions.send_keys(Keys.ESCAPE).perform()
-        return "SUCCESS"
+        return "PENDING"
                 
     except Exception as e:
         print(f"❌ Lỗi tại send_connection: {str(e)}")
@@ -556,11 +559,40 @@ def check_connection(driver: webdriver.Chrome, email: str = ""):
         # Chỉ kiểm tra nhanh trong 2-3 giây
         pending_elements = driver.find_elements(By.XPATH, "//button[contains(., 'Pending') or contains(., 'Withdraw')]")
         
+        #1 Check có nút Pending 
         if len(pending_elements) > 0:
             print("Trạng thái: Đang chờ xác nhận (Pending).")
             return "PENDING"
+        #2 Check nút Connected ngoài
+        connected_main = driver.find_elements(By.XPATH, XPATH_CONNECTED_MAIN)
+        if len(connected_main) > 0:
+            print(f"Trạng thái: Đã kết nối (Tìm thấy nút Connected ngoài): {connected_main}")
+            return "CONNECTED"
+        else:
+            print("Không tìm thấy nút Connected ngoài.")
 
-        # Nếu không phải Pending, mới tiến hành gửi connection
+        #3 Check nút "Remove connection" bên trong menu "More"
+        try:
+            print(f"Start finding {XPATH_MORE_BTN_MAIN}")
+            more_btn = WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, XPATH_MORE_BTN_MAIN)))
+            driver.execute_script("arguments[0].click();", more_btn)
+            time.sleep(2)
+            
+            remove_btn = driver.find_elements(By.XPATH, XPATH_MORE_REMOVE_CONNECTION)
+            if len(remove_btn) > 0:
+                print(f"🔍 Trạng thái: Đã kết nối (Tìm thấy Remove connection trong More): {remove_btn}")
+                # Đóng menu More trước khi thoát
+                webdriver.ActionChains(driver).send_keys(Keys.ESCAPE).perform()
+                return "CONNECTED"
+            
+            # Nếu không thấy nút Remove, đóng menu More để tiếp tục tìm Connect
+            print("Không tìm thấy nút Remove connection trong More, sẽ thử gửi kết nối nếu có thể.")
+            webdriver.ActionChains(driver).send_keys(Keys.ESCAPE).perform()
+            time.sleep(1)
+        except:
+            pass
+        
+        # Nếu không phải Pending hoặc chưa CONNECTED hoặc chưa có nút "Remove Connection" trong More, mới tiến hành gửi connection
         print("Trạng thái: Chưa gửi, bắt đầu gọi send_connection...")
         res = send_connection(driver)
         return res
@@ -687,7 +719,7 @@ def main_connect():
             # Cập nhật DataFrame
             #df.at[index, COL_STATUS] = status
             df.iat[index, 3] = status
-            if status in ["SUCCESS", "PENDING", "SUCCESS: CONNECT WITHOUT NOTE!"]:
+            if status in ["SUCCESS", "PENDING", "SUCCESS: CONNECT WITHOUT NOTE!", "CONNECTED"]:
                 #df.at[index, COL_DROPDOWN] = "Đã gửi connect"
                 df.iat[index, 2] = "Đã gửi connect"
                 send_count += 1
