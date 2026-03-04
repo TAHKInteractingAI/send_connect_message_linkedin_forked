@@ -667,50 +667,67 @@ def main_mess():
         profile_link = str(row.get('Link', '')).strip()
         name = str(row.get('Name', '')).strip()
         message = str(row.get('Message', '')).strip()
+        current_status = str(row.get('Status', '')).strip()
 
-        # YÊU CẦU 1: Kiểm tra nếu thiếu Name, Link hoặc Message thì bỏ qua
-        if pd.isna(profile_link) or str(profile_link).strip() == "" or pd.isna(name) or str(name).strip() == "" or pd.isna(message) or str(message).strip() == "":
-            print(f"SKIP: Dòng {index+2} thiếu thông tin.") # Dòng thực tế = index + 2
+        #Nếu Status là MESSAGE_SENT thì bỏ qua dòng đó
+        if current_status == "MESSAGE_SENT":
+            print(f"SKIP: Dòng {index+2} ({name}) đã gửi thành công trước đó.")
+            continue
+
+        # Kiểm tra nếu thiếu Name, Link hoặc Message thì bỏ qua
+        if pd.isna(profile_link) or profile_link == "" or pd.isna(name) or name == "" or pd.isna(message) or message == "":
+            print(f"SKIP: Dòng {index+2} thiếu thông tin.")
             df.at[index, 'Status'] = "ERROR: MISSING DATA"
             continue
 
-        # YÊU CẦU 2: Kiểm tra nếu trùng link đã gửi trước đó thì bỏ qua
+        # Kiểm tra nếu trùng link đã gửi trong PHIÊN NÀY
         if profile_link in sent_links:
-            print(f"SKIP: Link trùng lặp tại dòng {index+3}: {profile_link}")
+            print(f"SKIP: Link trùng lặp tại dòng {index+2}: {profile_link}")
             df.at[index, 'Status'] = "ERROR: DUPLICATE LINK"
             continue
 
         print(f"Processing: {profile_link}")
         
-        # Kiểm tra đính kèm và format tin nhắn qua hàm check_datum
         datum = check_datum(row)
         if isinstance(datum, str):
             status = datum
         else:
-            try:
-                driver.get(profile_link)
-                random_delay(5, 10) 
+            #Thử lại tối đa 3 lần nếu gặp lỗi Exception
+            max_retries = 3
+            status = "ERROR: FAILED AFTER RETRIES"
+            
+            for attempt in range(max_retries):
+                try:
+                    driver.get(profile_link)
+                    random_delay(5, 10) 
+                    
+                    result = send_message_optimized(driver, row)
+                    
+                    if result == "SUCCESS":
+                        send_count += 1
+                        sent_links.add(profile_link)
+                        status = "MESSAGE_SENT"
+                        print(f"-> Gửi thành công đến {name} (Lần thử {attempt + 1})")
+                        break # Thoát vòng lặp retry nếu thành công
+                    else:
+                        status = result
+                        print(f"-> Thử lại lần {attempt + 1} cho {name} do lỗi: {result}")
                 
-                status = send_message_optimized(driver, row)
+                except Exception as e:
+                    status = f"ERROR: {str(e)}"
+                    print(f"-> Lỗi Exception lần {attempt + 1} cho {name}: {e}")
                 
-                if status == "SUCCESS":
-                    send_count += 1
-                    sent_links.add(profile_link) # Lưu link vào danh sách đã gửi
-                    status = "MESSAGE_SENT"
-                    print(f"-> Gửi thành công đến {name} ({send_count}/{MAX_MESSAGES_PER_DAY})")
-                
-            except Exception as e:
-                status = f"ERROR: {str(e)}"
-                print(status)
+                # Delay một chút trước khi thử lại dòng đó
+                random_delay(5, 8)
 
         # Cập nhật trạng thái vào DataFrame
         df.at[index, 'Status'] = status
         
-        # Nghỉ giữa các lần gửi nếu vừa gửi thành công
-        if status == "MESSAGE_SENT" and send_count < MAX_MESSAGES_PER_DAY:
+        # Nghỉ giữa các profile khác nhau
+        if status == "MESSAGE_SENT":
             random_delay(15, 25)
         else:
-            random_delay(10,15) # Nếu không gửi được, vẫn nên delay để tránh bị quét bot
+            random_delay(5, 10)
     # else:
     #     print("CRITICAL: Không thể tiến hành gửi tin nhắn vì đăng nhập thất bại.")
     #CẬP NHẬT TRẠNG THÁI LÊN GOOGLE SHEETS.
