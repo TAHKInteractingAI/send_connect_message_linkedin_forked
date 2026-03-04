@@ -375,13 +375,7 @@ STATUS_MESSAGE = "/html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/di
 XPATH_MORE_BTN_MAIN = "//main//button[contains(@aria-label, 'More')]"
 
 # XPATH ỨNG VỚI NÚT UNCONNECT KHI NHẤN NÚT MORE.
-XPATH_MORE_CONNECT = (
-    "//div[contains(@class, 'artdeco-dropdown__content')]//*["
-    "contains(@aria-label, 'to connect') or "
-    "contains(@aria-label, 'Connect') or "
-    "( (self::button or self::a or self::div) and contains(., 'Connect') )"
-    "]"
-)#"/html/body/div[2]/div/div/div[3]/div/div/a | /html/body/div[2]/div/div/div[3]/div/div/button[contains(@aria-label, 'to connect')] | /html/body/div[6]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[2]/div/div/ul/li[3]/div[contains(@aria-label, 'to connect') or contains(@role, 'button')]" #Đổi sang full XPATH (dễ lỗi hơn nếu có updated từ linkedin)
+XPATH_MORE_CONNECT = "/html/body/div[2]/div/div/div[3]/div/div/a | /html/body/div[2]/div/div/div[3]/div/div/button[contains(@aria-label, 'to connect')] | /html/body/div[6]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[2]/div/div/ul/li[3]/div[contains(@aria-label, 'to connect') or contains(@role, 'button')]" #Đổi sang full XPATH (dễ lỗi hơn nếu có updated từ linkedin)
 
 # XPATH để tìm nút Connected hoặc trạng thái đã kết nối ở màn hình chính
 XPATH_CONNECTED_MAIN = "//main//button[contains(., 'Connected')] | //main//div[contains(@aria-label, 'Connected')]"
@@ -533,8 +527,23 @@ def send_connection(driver: webdriver.Chrome):
                 connect_btn = wait.until(EC.element_to_be_clickable((By.XPATH, XPATH_MORE_CONNECT)))
                 print(f"✅ Tìm thấy nút Connect trong More: {connect_btn.text}")
             except TimeoutException:
-                print("❌ Không tìm thấy nút Connect ở bất cứ đâu.")
-                return "FAILED"
+                print("❌ Không tìm thấy n  út Connect ở bất cứ đâu, bắt đầu dùng actionChains.")
+                #Dùng biện pháp cuối với actionChains
+                try:
+                    for i in range(3):
+                        actions.send_keys(Keys.TAB).perform()
+                        time.sleep(random.uniform(0.25, 0.5))
+                    actions.send_keys(Keys.SPACE).perform()
+                    time.sleep(1)
+                    for i in range(3):
+                        actions.send_keys(Keys.TAB).perform()
+                        time.sleep(0.5)
+                    time.sleep(2)
+                    print("🚀 Đã gửi yêu cầu kết nối thành công!")
+                    return "START PENDING"       
+                except Exception as e:
+                    print(f"❌ Lỗi tại actionChains: {str(e)}")
+                    return "FAILED"
 
         # Bước 3: Click vào nút Connect
         driver.execute_script("arguments[0].click();", connect_btn) #Thay đổi thành arguments[0]
