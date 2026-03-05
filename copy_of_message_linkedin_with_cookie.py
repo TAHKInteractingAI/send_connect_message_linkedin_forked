@@ -8,17 +8,17 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import NoSuchElementException, TimeoutException
+from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
+from google import genai
+from google.genai import types
+from google.genai.errors import ServerError
 #from IPython.display import Image, display
 from oauth2client.service_account import ServiceAccountCredentials
-from fastapi import FastAPI
 import requests
-import re
 import pandas as pd
 from dotenv import load_dotenv
 import gspread
@@ -27,6 +27,7 @@ from pathlib import Path
 load_dotenv()
 
 """# **CONFIG**"""
+MAX_RETRIES = 3
 MISSIVE_API_KEY = os.getenv('MISSIVE_API_KEY')
 MAX_MESSAGES_PER_DAY = 15
 COOKIES_FILE = 'linkedin_cookies.pkl'
@@ -355,7 +356,7 @@ def login_with_cookie(driver):
 """# **XPATH**"""
 
 # XPATH ỨNG VỚI NÚT MESSAGE.
-BUTTON_MESSAGE = "/html/body/div[6]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[1]/button[contains(@aria-label, 'Message')]" #Đổi sang full XPATH (dễ lỗi hơn nếu có updated từ linkedin)
+BUTTON_MESSAGE = "/html/body/div[6]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[1]/button[contains(@aria-label, 'Message')] | /html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/section/div/div/div[2]/div[3]/div/div/div[1]/a | /html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/section/div/div/div[2]/div[3]/div/div/div[2]/a"  #Đổi sang full XPATH (dễ lỗi hơn nếu có updated từ linkedin)
 
 # XPATH ỨNG VỚI KHUNG TIN NHẮN. (CLASS NAME)
 FIELD_MESSAGE = "msg-form__contenteditable"
@@ -493,6 +494,52 @@ def send_message(driver: webdriver.Chrome, target_profile, datum):
         print("\n" + str(e))
         return "ERROR: MESSAGE NOT SENT!"
 
+
+
+def solve_subject_field_with_gemini(image_path: str, max_entries: int = 3) -> str:
+    client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
+
+    # Read & encode image
+    with open(image_path, "rb") as f:
+        image_base64 = base64.b64encode(f.read()).decode("utf-8")
+
+    for attempt in range(1, max_entries + 1):
+        try:
+            response = client.models.generate_content(
+                model="gemini-3-flash-preview",
+                contents=[
+                    types.Content(
+                        role="user",                    
+                        parts=[
+                            types.Part(
+                                text=(
+                                    "This is a linkedin image that contains the message box. "
+                                    "If there's an input field to type in subject, response 'YES', else response 'NO'."
+                                    "Only give me one-word response, nothing else."
+                                )
+                            ),
+                            types.Part(
+                                inline_data=types.Blob(
+                                    mime_type="image/png",
+                                    data=image_base64,
+                                )
+                            ),
+                        ],
+                    )
+                ],
+            )
+
+            # Safe extraction
+            return response.text.strip()
+
+        except ServerError as e:
+            if attempt < max_entries:
+                time.sleep(3)
+            else:
+                raise RuntimeError("❌ Max retries reached. Gemini API unavailable.") from e
+
+    return None
+
 def send_message_optimized(driver, row):
     try:
         name = row['Name']
@@ -515,8 +562,9 @@ def send_message_optimized(driver, row):
             print(f"Tìm thấy nút msg: {msg_btn}")
             msg_btn.click()
             time.sleep(3)
-            driver.save_screenshot(f"message_box_found_{row['Name']}.png")
+            driver.save_screenshot(f"message_box_found.png")
         except:
+            print("Không tìm thấy nút msg")
             return "ERROR: MESSAGE BUTTON NOT FOUND"
         # premium_buy_button = "//a[contains(@class, 'artdeco-button') and contains(., 'Premium')]"
         # try:
@@ -525,7 +573,6 @@ def send_message_optimized(driver, row):
         #     return "PREMIUM_FOUND"
         # except TimeoutException:
         #     print("Nút Premium không khả dụng")
-        print("Message button found, ready to type input")
         # NHẬP NỘI DUNG
         # msg_box = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, FIELD_MESSAGE_CLASS)))
         #print("Message box found")
@@ -534,11 +581,20 @@ def send_message_optimized(driver, row):
         #human_type(msg_box, full_message)
         # msg_box.send_keys(full_message)
         #driver.switch_to.active_element.send_keys(full_message)
+        current_element = driver.switch_to.active_element.get_attribute("class")
+        print(f"Current active element: {current_element}")
+        
         actions = ActionChains(driver)
-        actions.send_keys(full_message)
-        actions.perform()
-        print("Message input complete")
+        gemini_result = solve_subject_field_with_gemini("message_box_found.png")
+        print(gemini_result)
+        if gemini_result == None:
+            return "UNKNOWN"
+        if gemini_result == "YES":
+            actions.send_keys(Keys.TAB).perform()
+            time.sleep(0.5)
+        actions.send_keys(full_message).perform()
         actions.send_keys(Keys.SPACE).perform()
+        print("Message input complete")
         time.sleep(2)
         #safe_type_multiline(msg_box, full_message)
         #Nhập nội dung dùng JavaScript để hỗ trợ Link dài
@@ -693,21 +749,22 @@ def main_mess():
             status = datum
         else:
             #Thử lại tối đa 3 lần nếu gặp lỗi Exception
-            max_retries = 3
+            
             status = "ERROR: FAILED AFTER RETRIES"
             
-            for attempt in range(max_retries):
+            for attempt in range(MAX_RETRIES):
                 try:
                     driver.get(profile_link)
                     random_delay(5, 10) 
                     
                     result = send_message_optimized(driver, row)
-                    
+                    if result == "UNKNOWN":
+                        status = "MESSAGE_UNKNOWN"
                     if result == "SUCCESS":
                         send_count += 1
                         sent_links.add(profile_link)
                         status = "MESSAGE_SENT"
-                        print(f"-> Gửi thành công đến {name} (Lần thử {attempt + 1})")
+                        print(f"-> Gửi thành công đến {name} (Lần thử {attempt + 1}) Hôm nay: {send_count}/{MAX_MESSAGES_PER_DAY}")
                         break # Thoát vòng lặp retry nếu thành công
                     else:
                         status = result
