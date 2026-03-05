@@ -367,15 +367,15 @@ def login(driver: webdriver.Chrome, username: str, password: str):
 """# **XPATH**"""
 
 # XPATH ỨNG VỚI NÚT CONNECT.
-XPATH_MAIN_CONNECT = "//main//a[contains(@aria-label, 'Invite') or contains(@aria-label, 'Connect')]"
+#XPATH_MAIN_CONNECT = "//main//a[contains(@aria-label, 'Invite') or contains(@aria-label, 'Connect')]"
 
 # XPATH ỨNG VỚI NÚT MESSAGE.
 STATUS_MESSAGE = "/html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/div/section/div/div/div[2]/div[3]/div/div/div[1]/a"#"/html/body/div/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[1]/button"
 # XPATH ỨNG VỚI NÚT MORE.
 XPATH_MORE_BTN_MAIN = "//main//button[contains(@aria-label, 'More')]"
 
-# XPATH ỨNG VỚI NÚT UNCONNECT KHI NHẤN NÚT MORE.
-XPATH_MORE_CONNECT = "/html/body/div[2]/div/div/div[3]/div/div/a | /html/body/div[2]/div/div/div[3]/div/div/button[contains(@aria-label, 'to connect')] | /html/body/div[6]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[2]/div/div/ul/li[3]/div[contains(@aria-label, 'to connect') or contains(@role, 'button')]" #Đổi sang full XPATH (dễ lỗi hơn nếu có updated từ linkedin)
+# XPATH ỨNG VỚI NÚT UNCONNECT KHI NHẤN NÚT MORE.                                                                                                          
+XPATH_MORE_CONNECT = "/html/body/div[2]/div/div/div[3]/div/div/a | /html/body/div[2]/div/div/div[3]/div/div/button[contains(@aria-label, 'to connect')] | /html/body/div[5]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[2]/div/div/ul/li[3]/div[contains(@aria-label, 'to connect') or contains(@role, 'button')] | /html/body/div[6]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[2]/div/div/ul/li[3]/div[contains(@aria-label, 'to connect') or contains(@role, 'button')]" #Đổi sang full XPATH (dễ lỗi hơn nếu có updated từ linkedin)
 
 # XPATH để tìm nút Connected hoặc trạng thái đã kết nối ở màn hình chính
 XPATH_CONNECTED_MAIN = "//main//button[contains(., 'Connected')] | //main//div[contains(@aria-label, 'Connected')]"
@@ -507,6 +507,7 @@ def send_connection(driver: webdriver.Chrome):
             "//main//a[contains(@class, 'profile-top-card')]//button[contains(@aria-label, 'to connect')]"
             "| //main//a[contains(@class, 'profile-top-card')]//a[contains(@aria-label, 'to connect')]"
             "| /html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/section/div/div/div[2]/div[3]/div/div/div[1]/div/div/a"
+            "| /html/body/div[6]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/button"
             # "| //main//button[./span[text()='Connect']]"
             # "| //main//a[contains(., 'Connect')]"
         )
