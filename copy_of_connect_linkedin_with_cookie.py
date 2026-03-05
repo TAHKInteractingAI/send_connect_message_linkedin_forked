@@ -374,7 +374,7 @@ STATUS_MESSAGE = "/html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/di
 # XPATH ỨNG VỚI NÚT MORE.
 XPATH_MORE_BTN_MAIN = "//main//button[contains(@aria-label, 'More')]"
 
-# XPATH ỨNG VỚI NÚT UNCONNECT KHI NHẤN NÚT MORE.                                                                                                          /html/body/div[5]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[2]/div/div/ul/li[3]/div                                                                             
+# XPATH ỨNG VỚI NÚT UNCONNECT KHI NHẤN NÚT MORE.
 XPATH_MORE_CONNECT = "/html/body/div[2]/div/div/div[3]/div/div/a | /html/body/div[2]/div/div/div[3]/div/div/button[contains(@aria-label, 'to connect')] | /html/body/div[5]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[2]/div/div/ul/li[3]/div[contains(@aria-label, 'to connect') or contains(@role, 'button')] | /html/body/div[6]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[2]/div/div/ul/li[3]/div[contains(@aria-label, 'to connect') or contains(@role, 'button')]" #Đổi sang full XPATH (dễ lỗi hơn nếu có updated từ linkedin)
 
 # XPATH để tìm nút Connected hoặc trạng thái đã kết nối ở màn hình chính
@@ -508,8 +508,8 @@ def send_connection(driver: webdriver.Chrome):
             # "| //main//a[contains(@class, 'profile-top-card')]//a[contains(@aria-label, 'to connect')]"
             "/html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/section/div/div/div[2]/div[3]/div/div/div[1]/div/div/a"
             "| /html/body/div[6]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/button[contains(@aria-label, 'to connect')]"
-            # "| //main//button[./span[text()='Connect']]"
-            # "| //main//a[contains(., 'Connect')]"
+            "| //main//button[./span[text()='Connect']]"
+            "| //main//a[contains(., 'Connect')]"
         )
         
         try:
@@ -527,7 +527,7 @@ def send_connection(driver: webdriver.Chrome):
                 time.sleep(2)
                 print(f"Start finding {XPATH_MORE_CONNECT}")
                 connect_btn = wait.until(EC.element_to_be_clickable((By.XPATH, XPATH_MORE_CONNECT)))
-                print(f"✅ Tìm thấy nút Connect/Pending trong More: {connect_btn.text}")
+                print(f"✅ Tìm thấy nút Connect/Pending trong More: {connect_btn.tag_name}, {connect_btn.text}")
                 if connect_btn.text == "Pending":
                     print("🔄 Nút đang chờ xác nhận (Pending).")
                     return "ALREADY PENDED"                
