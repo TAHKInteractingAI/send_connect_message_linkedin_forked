@@ -514,7 +514,7 @@ def send_connection(driver: webdriver.Chrome):
         
         try:
             connect_btn = wait.until(EC.element_to_be_clickable((By.XPATH, xpath_connect)))
-            print(f"✅ Tìm thấy nút Connect từ ngoài: {connect_btn}")
+            print(f"✅ Tìm thấy nút Connect từ ngoài: {connect_btn.tag_name}, {connect_btn.text}")
         except TimeoutException:
             print("🔍 Không thấy nút bên ngoài, thử tìm trong More...")
 
@@ -538,8 +538,9 @@ def send_connection(driver: webdriver.Chrome):
                     for i in range(3):
                         actions.send_keys(Keys.TAB).perform()
                         time.sleep(random.uniform(0.25, 0.5))
-                    print(f"Current element text: {driver.switch_to.active_element.text}")
-                    if "Connect" not in driver.switch_to.active_element.text or "Invite" not in driver.switch_to.active_element.text:
+                    cur_element = driver.switch_to.active_element.text
+                    print(f"Current element text: {cur_element}")
+                    if cur_element != "Connect" and cur_element != "Invite":
                         actions.send_keys(Keys.TAB).perform()
                         time.sleep(random.uniform(0.25, 0.3))
                     actions.send_keys(Keys.SPACE).perform()
