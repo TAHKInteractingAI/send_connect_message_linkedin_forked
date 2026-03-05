@@ -139,7 +139,7 @@ def get_driver():
     options.add_argument('--no-sandbox')
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument('--disable-gpu')
-    options.add_argument('--headless=new')
+    #options.add_argument('--headless=new')
     options.add_argument("--window-size=1920,1200")
     
     # 3. CHỐNG PHÁT HIỆN BOT (Stealth Mode)
@@ -504,20 +504,21 @@ def send_connection(driver: webdriver.Chrome):
 
         # Bước 1: Tìm nút Connect bên ngoài
         xpath_connect = (
-            "//main//button[contains(@aria-label, 'to connect')]"
-            "| //main//a[contains(@aria-label, 'to connect')]"
-            "| //main//button[./span[text()='Connect']]"
-            "| //main//a[contains(., 'Connect')]"
+            "//main//a[contains(@class, 'profile-top-card')]//button[contains(@aria-label, 'to connect')]"
+            "| //main//a[contains(@class, 'profile-top-card')]//a[contains(@aria-label, 'to connect')]"
+            "| /html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/section/div/div/div[2]/div[3]/div/div/div[1]/div/div/a"
+            # "| //main//button[./span[text()='Connect']]"
+            # "| //main//a[contains(., 'Connect')]"
         )
         
         try:
             connect_btn = wait.until(EC.element_to_be_clickable((By.XPATH, xpath_connect)))
-            print(f"✅ Tìm thấy nút Connect từ ngoài: {connect_btn.text}")
+            print(f"✅ Tìm thấy nút Connect từ ngoài: {connect_btn}")
         except TimeoutException:
             print("🔍 Không thấy nút bên ngoài, thử tìm trong More...")
 
         # Bước 2: Nếu không thấy, tìm trong More
-        if not connect_btn or not connect_btn.is_displayed():
+        if not connect_btn:
             try:
                 more_btn = wait.until(EC.element_to_be_clickable((By.XPATH, XPATH_MORE_BTN_MAIN)))
                 driver.execute_script("arguments[0].click();", more_btn) #Thay đổi thành arguments[0]
@@ -525,9 +526,12 @@ def send_connection(driver: webdriver.Chrome):
                 time.sleep(2)
                 print(f"Start finding {XPATH_MORE_CONNECT}")
                 connect_btn = wait.until(EC.element_to_be_clickable((By.XPATH, XPATH_MORE_CONNECT)))
-                print(f"✅ Tìm thấy nút Connect trong More: {connect_btn.text}")
+                print(f"✅ Tìm thấy nút Connect/Pending trong More: {connect_btn.text}")
+                if connect_btn.text == "Pending":
+                    print("🔄 Nút đang chờ xác nhận (Pending).")
+                    return "ALREADY PENDED"
             except TimeoutException:
-                print("❌ Không tìm thấy n  út Connect ở bất cứ đâu, bắt đầu dùng actionChains.")
+                print("❌ Không tìm thấy nút Connect ở bất cứ đâu, bắt đầu dùng actionChains.")
                 #Dùng biện pháp cuối với actionChains
                 try:
                     for i in range(3):
@@ -725,8 +729,13 @@ def main_connect():
         print(f"🚀 Đang xử lý dòng {index + 2}: {profile_link}")
         try:
             driver.get(profile_link)
-            time.sleep(random.uniform(5, 8))
-            
+            #trả về 404 page not found thì bỏ qua            
+            time.sleep(random.uniform(5, 6))
+            print(f"Page title: {driver.current_url} - {driver.title}")
+            if driver.current_url == "https://www.linkedin.com/404/":
+                print(f"⏭️ Bỏ qua dòng {index + 2}: {profile_link} (Trạng thái: 404 Not Found)")
+                continue
+            driver.save_screenshot(f"before_check_index{index}.png")
             # Kiểm tra và gửi connect
             email_to_fill = row.get("Email để điền khi gặp câu hỏi trog lúc connect", "")
             status = check_connection(driver, email_to_fill)
