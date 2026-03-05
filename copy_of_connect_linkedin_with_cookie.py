@@ -139,7 +139,7 @@ def get_driver():
     options.add_argument('--no-sandbox')
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument('--disable-gpu')
-    options.add_argument('--headless=new')
+    #options.add_argument('--headless=new')
     options.add_argument("--window-size=1920,1200")
     
     # 3. CHỐNG PHÁT HIỆN BOT (Stealth Mode)
@@ -507,7 +507,7 @@ def send_connection(driver: webdriver.Chrome):
             # "//main//a[contains(@class, 'profile-top-card')]//button[contains(@aria-label, 'to connect')]"
             # "| //main//a[contains(@class, 'profile-top-card')]//a[contains(@aria-label, 'to connect')]"
             "/html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/section/div/div/div[2]/div[3]/div/div/div[1]/div/div/a"
-            "| /html/body/div[6]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/button"
+            "| /html/body/div[6]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/button[contains(@aria-label, 'to connect')]"
             # "| //main//button[./span[text()='Connect']]"
             # "| //main//a[contains(., 'Connect')]"
         )
