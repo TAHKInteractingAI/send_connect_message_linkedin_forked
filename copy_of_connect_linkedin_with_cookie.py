@@ -58,17 +58,6 @@ RANGE_NAME = "Sheet1!A:E"
 GOOGLE_CREDS = os.getenv('GOOGLE_APPLICATION_CRED')
 
 """# **HÀM HỖ TRỢ**"""
-def safe_click(driver, xpath, retries=3):
-    for i in range(retries):
-        try:
-            element = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, xpath)))
-            driver.execute_script("arguments[0].click();", element)
-            return True
-        except Exception:
-            time.sleep(1)
-            continue
-    return False
-
 def get_missive_linkedin_code():
     response = requests.get("https://public.missiveapp.com/v1/conversations", headers=HEADERS, params=PARAMS)
     if response.status_code != 200:
@@ -356,8 +345,7 @@ def login(driver: webdriver.Chrome, username: str, password: str):
     human_type(password_field, password)
     #password_field.send_keys(password)
     time.sleep(2)
-    #login_button.click()
-    safe_click(driver, XPATH_LOGIN_BUTTON)
+    login_button.click()
 
     time.sleep(10)
     driver.save_screenshot("before_verification.png")
@@ -595,7 +583,7 @@ def check_connection(driver: webdriver.Chrome, email: str = ""):
         # Sử dụng find_elements (số nhiều) để không bị crash nếu không tìm thấy
         # Chỉ kiểm tra nhanh trong 2-3 giây
         pending_elements = driver.find_elements(By.XPATH, "//button[contains(., 'Pending') or contains(., 'Withdraw') or contains(@aria-label, 'Pending') or contains(@aria-label, 'Withdraw')] | /html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/section/div/div/div[2]/div[3]/div/div/div[2]/div/div/a[contains(., 'Pending') or contains(., 'Withdraw')]")
-
+        
         #1 Check có nút Pending
         if len(pending_elements) > 0:
             print("Trạng thái: Đang chờ xác nhận (Pending).")
