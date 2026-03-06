@@ -345,7 +345,7 @@ def login(driver: webdriver.Chrome, username: str, password: str):
     human_type(password_field, password)
     #password_field.send_keys(password)
     time.sleep(2)
-    login_button.click()
+    driver.execute_script("arguments[0].click();", login_button)
 
     time.sleep(10)
     driver.save_screenshot("before_verification.png")
