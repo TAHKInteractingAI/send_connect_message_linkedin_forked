@@ -349,7 +349,7 @@ def login(driver: webdriver.Chrome, username: str, password: str):
         try:
             WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH, XPATH_LOGIN_BUTTON))).click()
             print(f"Click login thành công ở lần {i+1}")
-             break
+            break
         except Exception as e:
             print(f"STALE ERROR {i+1}: {e}")
             time.sleep(1)
