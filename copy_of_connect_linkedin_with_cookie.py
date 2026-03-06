@@ -350,8 +350,8 @@ def login(driver: webdriver.Chrome, username: str, password: str):
             login_button = WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH, XPATH_LOGIN_BUTTON)))
             login_button.click()
         except Exception as e:
-            print(f"ERROR: {e}")
-            time.sleep(1)
+            print(f"ERROR {i}: {e}")
+            time.sleep(2)
     
     
     time.sleep(10)
