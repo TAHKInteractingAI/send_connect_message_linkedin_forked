@@ -288,7 +288,7 @@ def login(driver: webdriver.Chrome, username: str, password: str):
     driver.save_screenshot("before_input.png")
     username_field = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, XPATH_USERNAME)))
     password_field = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, XPATH_PASSWORD)))
-    login_button = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, XPATH_LOGIN_BUTTON)))
+    
     
     human_type(username_field, username)
     #username_field.send_keys(username)
@@ -296,8 +296,16 @@ def login(driver: webdriver.Chrome, username: str, password: str):
     human_type(password_field, password)
     #password_field.send_keys(password)
     time.sleep(2)
-    login_button.click()
-
+    for i in range(5):
+        try:
+            WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH, XPATH_LOGIN_BUTTON))).click()
+            print(f"Click login thành công ở lần {i+1}")
+            break
+        except Exception as e:
+            print(f"STALE ERROR {i+1}: {e}")
+            time.sleep(1)
+    
+    
     time.sleep(10)
     driver.save_screenshot("before_verification.png")
     handle_code_verification(driver)
