@@ -553,9 +553,11 @@ def send_connection(driver: webdriver.Chrome):
                         time.sleep(random.uniform(0.25, 0.3))
                     actions.send_keys(Keys.SPACE).perform()
                     time.sleep(1)
+                    #Đi vào Modal xác nhận
                     for i in range(3):
                         actions.send_keys(Keys.TAB).perform()
                         time.sleep(0.5)
+                    actions.send_keys(Keys.SPACE).perform()
                     time.sleep(2)
                     print("🚀 Đã gửi yêu cầu kết nối thành công!")
                     return "START PENDING"       
@@ -572,8 +574,7 @@ def send_connection(driver: webdriver.Chrome):
         # Bước 4: Xử lý Modal gửi kết nối (Thao tác phím để tránh lỗi XPath popup)
         for i in range(3):
             actions.send_keys(Keys.TAB).perform()
-            time.sleep(0.5)
-        
+            time.sleep(1)
         actions.send_keys(Keys.SPACE).perform()
         print("🚀 Đã gửi yêu cầu kết nối thành công!")
         
@@ -770,37 +771,6 @@ def main_connect():
             print(f"❌ Lỗi dòng {index + 2}: {e}")
             driver.save_screenshot(f"fail_sent_index{index}_count{send_count}.png")
             df.at[index, COL_STATUS] = "ERROR"
-
-    # # 4. CẬP NHẬT LẠI GOOGLE SHEETS
-    # print("📤 Đang đồng bộ dữ liệu lên Sheets...")
-    
-    # # Thay thế NaN bằng chuỗi rỗng để tránh lỗi JSON
-    # df_to_upload = df.fillna("") 
-    
-    # # Lấy danh sách giá trị (không bao gồm Header để tránh ghi đè làm hỏng format tiêu đề)
-    # # Chúng ta chỉ cập nhật từ dòng thứ 2 (A2) trở đi
-    # final_values = df_to_upload.values.tolist()
-    
-    # # Xác định vùng cập nhật chính xác dựa trên kích thước DataFrame
-    # # Ví dụ: Sheet1!A2:E10 (Nếu có 5 cột và 9 dòng dữ liệu)
-    # num_rows = len(final_values)
-    # num_cols = len(df_to_upload.columns)
-    
-    # # Chuyển chỉ số cột thành chữ cái (A, B, C...)
-    # last_col_letter = chr(ord('A') + num_cols - 1)
-    # update_range = f"Sheet1!A2:{last_col_letter}{num_rows + 1}"
-
-    # try:
-    #     # Sử dụng phương thức update cho đúng vùng dữ liệu thay vì ghi đè toàn bộ Sheet
-    #     service.spreadsheets().values().update(
-    #         spreadsheetId=SPREADSHEET_ID, 
-    #         range=update_range,
-    #         valueInputOption='RAW', 
-    #         body={'values': final_values}
-    #     ).execute()
-    #     print(f"✅ Đã cập nhật xong vùng {update_range}!")
-    # except Exception as e:
-    #     print(f"❌ Lỗi cập nhật Sheets: {e}")
 
     # 4. CẬP NHẬT LẠI GOOGLE SHEETS DÙNG BATCH UPDATE
     print("📤 Đang chuẩn bị dữ liệu Batch Update...")
