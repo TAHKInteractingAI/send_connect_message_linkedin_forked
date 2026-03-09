@@ -45,6 +45,7 @@ jobs:
           LINKEDIN_PASSWORD: ${{ secrets.LINKEDIN_PASSWORD }}
           RAW_COOKIE_BASE64: ${{ secrets.RAW_COOKIE_BASE64 }}
           LINKEDIN_COOKIE: ${{ secrets.LINKEDIN_COOKIE }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
           MISSIVE_API_KEY: ${{ secrets.MISSIVE_API_KEY }}
         run: python -c "from copy_of_connect_linkedin_with_cookie import main_connect; main_connect()"
 
@@ -54,6 +55,7 @@ jobs:
           SPREADSHEET_MESS_ID: ${{ secrets.SPREADSHEET_MESS_ID }}
           GOOGLE_APPLICATION_CRED: ${{ secrets.GOOGLE_APPLICATION_CRED }}
           LINKEDIN_USERNAME: ${{ secrets.LINKEDIN_USERNAME }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
           RAW_COOKIE_BASE64: ${{ secrets.RAW_COOKIE_BASE64 }}
           LINKEDIN_PASSWORD: ${{ secrets.LINKEDIN_PASSWORD }}
           LINKEDIN_COOKIE: ${{ secrets.LINKEDIN_COOKIE }}
