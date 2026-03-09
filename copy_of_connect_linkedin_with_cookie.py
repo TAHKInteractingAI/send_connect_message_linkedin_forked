@@ -503,7 +503,32 @@ def find_element_in_list(driver: webdriver.Chrome, e_list: list[str]):
 #         # Nếu bị kẹt, nhấn ESC để thoát Modal cho dòng tiếp theo
 #         webdriver.ActionChains(driver).send_keys(Keys.ESCAPE).perform()
 #         return "FAILED"
-
+def press_space_with_backup(sleep_time, actions, driver):
+    # 1. Thử dùng ActionChains với phím
+    actions.send_keys(Keys.SPACE).perform()
+    time.sleep(sleep_time)
+    
+    # 2. KIỂM TRA: Nếu Modal vẫn còn đó, nghĩa là thất bại
+    #dùng JavaScript để quét và ép Click vào nút "Send"
+    print("⚠️ Phím SPACE/ENTER không tác dụng, kích hoạt Backup: JavaScript Force Click...")
+    
+    script_click = """
+    var buttons = document.querySelectorAll('button');
+    var target = Array.from(buttons).find(b => 
+        b.innerText.includes('Send without a note') || 
+        b.innerText.includes('Send now') || 
+        (b.getAttribute('aria-label') && b.getAttribute('aria-label').includes('without a note'))
+    );
+    if (target) {
+        target.click();
+        return true;
+    }
+    return false;
+    """
+    
+    success = driver.execute_script(script_click)
+    return success
+    
 def send_connection(driver: webdriver.Chrome):
     try:
         wait = WebDriverWait(driver, 10)
@@ -551,16 +576,32 @@ def send_connection(driver: webdriver.Chrome):
                     if cur_element != "Connect" and cur_element != "Invite":
                         actions.send_keys(Keys.TAB).perform()
                         time.sleep(random.uniform(0.25, 0.3))
-                    actions.send_keys(Keys.SPACE).perform()
-                    time.sleep(1)
+                    # actions.send_keys(Keys.SPACE).perform()
+                    # time.sleep(1)
+                    success = press_space_with_backup(2, actions, driver)
+                    if success:
+                        print("🚀 JavaScript đã ép gửi thành công!")
+                    else:
+                        # Nếu không tìm thấy nút bằng text, thử click vào phần tử đang focus
+                        print("🔍 Thử click vào active_element hiện tại...")
+                        driver.execute_script("arguments[0].click();", driver.switch_to.active_element)
                     #Đi vào Modal xác nhận
                     for i in range(3):
                         actions.send_keys(Keys.TAB).perform()
                         time.sleep(0.5)
-                    actions.send_keys(Keys.SPACE).perform()
-                    time.sleep(2)
-                    print("🚀 Đã gửi yêu cầu kết nối thành công!")
-                    return "START PENDING"       
+                    # actions.send_keys(Keys.SPACE).perform()
+                    # time.sleep(2)
+                    # print("🚀 Đã gửi yêu cầu kết nối thành công!")
+                    # return "START PENDING"
+                    success = press_space_with_backup(2, actions, driver)
+                    if success:
+                        print("🚀 JavaScript đã ép gửi thành công!")
+                        return "START PENDING"
+                    else:
+                        # Nếu không tìm thấy nút bằng text, thử click vào phần tử đang focus
+                        print("🔍 Thử click vào active_element hiện tại...")
+                        driver.execute_script("arguments[0].click();", driver.switch_to.active_element)
+                        return "START PENDING"    
                 except Exception as e:
                     print(f"❌ Lỗi tại actionChains: {str(e)}")
                     return "FAILED"
