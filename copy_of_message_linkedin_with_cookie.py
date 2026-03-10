@@ -595,7 +595,8 @@ def send_message_optimized(driver, row):
         actions = ActionChains(driver)
         gemini_result = solve_subject_field_with_gemini("message_box_found.png")
         print(gemini_result)
-        if gemini_result == None:
+        if gemini_result not in ['YES', 'NO']:
+            print("WARNING: Gemini response không rõ ràng, mặc định sẽ nhấn TAB để thử kích hoạt trường nhập tin nhắn.")
             return "UNKNOWN"
         if gemini_result == "YES":
             actions.send_keys(Keys.TAB).perform()
