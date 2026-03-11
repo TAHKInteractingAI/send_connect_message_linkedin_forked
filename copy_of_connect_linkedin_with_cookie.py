@@ -58,6 +58,28 @@ RANGE_NAME = "Sheet1!A:E"
 GOOGLE_CREDS = os.getenv('GOOGLE_APPLICATION_CRED')
 
 """# **HÀM HỖ TRỢ**"""
+def human_scroll(driver):
+    """Cuộn trang lên xuống ngẫu nhiên để mô phỏng người đọc profile"""
+    total_height = driver.execute_script("return document.body.scrollHeight")
+    scroll_point = random.randint(300, 700)
+    driver.execute_script(f"window.scrollTo(0, {scroll_point});")
+    time.sleep(random.uniform(1, 2))
+    driver.execute_script(f"window.scrollTo({scroll_point}, 0);")
+    print("DEBUG: Đã thực hiện cuộn trang giả lập.")
+
+def human_click(driver, element):
+    """Click vào một vị trí ngẫu nhiên trên button thay vì chính giữa"""
+    try:
+        action = ActionChains(driver)
+        width = element.size['width']
+        height = element.size['height']
+        # Lệch ngẫu nhiên trong phạm vi 20% kích thước nút
+        offset_x = random.randint(-int(width/5), int(width/5))
+        offset_y = random.randint(-int(height/5), int(height/5))
+        action.move_to_element_with_offset(element, offset_x, offset_y).click().perform()
+    except Exception:
+        driver.execute_script("arguments.click();", element)
+        
 def press_multiple_tab(actions,number_of_presses, wait_time):
     for i in range(number_of_presses):
         actions.send_keys(Keys.TAB).perform()
@@ -153,6 +175,7 @@ def get_driver():
     options.add_experimental_option('useAutomationExtension', False)
     # Vô hiệu hóa tính năng AutomationControlled của Blink
     options.add_argument("--disable-blink-features=AutomationControlled")
+    options.add_argument('--blink-settings=imagesEnabled=false')
     
     # Thêm các cờ để trình duyệt giống người dùng thật hơn
     options.add_argument("--disable-infobars")
@@ -328,6 +351,15 @@ def login(driver: webdriver.Chrome, username: str, password: str):
 """# **XPATH**"""
 
 # XPATH ỨNG VỚI NÚT CONNECT.
+# XPATH_MAIN_CONNECT = """
+# return document.evaluate(
+#     "/html/body/div/div/div/div/div/main/div/div/div/div/div/div/div/section/div/div/div/div/div/div/div/div/div/a | /html/body/div/div/div/div/div/div/div/main/section/div/div/div/button[contains(@aria-label, 'to connect')] | //main//button[./span[text()='Connect']] | //main//a[contains(., 'Connect')]", 
+#     document, 
+#     null, 
+#     XPathResult.FIRST_ORDERED_NODE_TYPE, 
+#     null
+# ).singleNodeValue;
+# """
 XPATH_MAIN_CONNECT = (
             # "//main//a[contains(@class, 'profile-top-card')]//button[contains(@aria-label, 'to connect')]"
             # "| //main//a[contains(@class, 'profile-top-card')]//a[contains(@aria-label, 'to connect')]"
@@ -345,11 +377,8 @@ XPATH_MORE_BTN_MAIN = "//main//button[contains(@aria-label, 'More')]"
 # XPATH ỨNG VỚI NÚT UNCONNECT KHI NHẤN NÚT MORE.
 XPATH_MORE_CONNECT = "/html/body/div[2]/div/div/div[3]/div/div/a | /html/body/div[2]/div/div/div[3]/div/div/button[contains(@aria-label, 'to connect')] | /html/body/div[5]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[2]/div/div/ul/li[3]/div[contains(@aria-label, 'to connect')] | /html/body/div[6]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[2]/div/div/ul/li[3]/div[contains(@aria-label, 'to connect')]" #Đổi sang full XPATH (dễ lỗi hơn nếu có updated từ linkedin)
 
-# XPATH để tìm nút Connected hoặc trạng thái đã kết nối ở màn hình chính
-XPATH_CONNECTED_MAIN = "//main//button[contains(., 'Connected')] | //main//div[contains(@aria-label, 'Connected')]"
-
 # XPATH tìm nút Remove Connection bên trong menu More
-XPATH_MORE_REMOVE_CONNECTION = "/html/body/div[2]/div/div/div[6]/div/div/div/div/div/p"
+XPATH_MORE_REMOVE_CONNECTION = "/html/body/div[2]/div/div/div[6]/div/div/div/div/div/p | /html/body/div[6]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[2]/div/div/ul/li[6]/div"
 
 # ========================== XPATH/SCRIPT ỨNG VỚI CÁC NÚT ADD EMAIL_NOTE ==========================
 #XPATH_BUTTON_ADD_NOTE = "/html/body/div[3]/div/div/div[3]/button[1]"
@@ -483,7 +512,7 @@ def send_connection(driver: webdriver.Chrome, profile_mail: str):
 
         # Bước 1: Tìm nút Connect bên ngoài        
         try:
-            connect_btn = wait.until(EC.element_to_be_clickable((By.XPATH, XPATH_CONNECTED_MAIN)))
+            connect_btn = wait.until(EC.element_to_be_clickable((By.XPATH, XPATH_MAIN_CONNECT)))
             print(f"✅ Tìm thấy nút Connect từ ngoài: {connect_btn.tag_name}, {connect_btn.text}")
         except TimeoutException:
             print("🔍 Không thấy nút bên ngoài, thử tìm trong More...")
@@ -607,47 +636,62 @@ def send_connection(driver: webdriver.Chrome, profile_mail: str):
     
 def check_connection(driver: webdriver.Chrome, profile_mail: str = ""):
     try:
-        # Sử dụng find_elements (số nhiều) để không bị crash nếu không tìm thấy
-        # Chỉ kiểm tra nhanh trong 2-3 giây
-        pending_elements = driver.find_elements(By.XPATH, "//button[contains(., 'Pending') or contains(., 'Withdraw') or contains(@aria-label, 'Pending') or contains(@aria-label, 'Withdraw')] | /html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/section/div/div/div[2]/div[3]/div/div/div[2]/div/div/a[contains(., 'Pending') or contains(., 'Withdraw')]")
+        # 1. Cuộn trang trước khi kiểm tra để load đủ dữ liệu
+        human_scroll(driver)
         
-        #1 Check có nút Pending
-        if len(pending_elements) > 0:
+        # 2. Kiểm tra nhanh trạng thái "Pending" hoặc "Wait"
+        # Dùng text-based XPath để chính xác hơn
+        pending_xpath = "//*[contains(text(), 'Pending') or contains(text(), 'Withdraw')]"
+        if driver.find_elements(By.XPATH, pending_xpath):
             print("Trạng thái: Đang chờ xác nhận (Pending).")
             return "ALREADY PENDED"
-        #2 Check nút Connected ngoài
-        connected_main = driver.find_elements(By.XPATH, XPATH_CONNECTED_MAIN)
-        if len(connected_main) > 0:
-            print(f"Trạng thái: Đã kết nối (Tìm thấy nút Connected ngoài): {connected_main}")
-            return "CONNECTED"
-        else:
-            print("Không tìm thấy nút Connected ngoài.")
 
-        #3 Check nút "Remove connection" bên trong menu "More"
-        try:
-            print(f"Start finding {XPATH_MORE_BTN_MAIN}")
-            more_btn = WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, XPATH_MORE_BTN_MAIN)))
-            driver.execute_script("arguments[0].click();", more_btn)
-            time.sleep(2)
-            
-            remove_btn = driver.find_elements(By.XPATH, XPATH_MORE_REMOVE_CONNECTION)
-            if len(remove_btn) > 0:
-                print(f"🔍 Trạng thái: Đã kết nối (Tìm thấy Remove connection trong More): {remove_btn}")
-                # Đóng menu More trước khi thoát
-                webdriver.ActionChains(driver).send_keys(Keys.ESCAPE).perform()
+        # 3. Kiểm tra nút "Connected" hoặc "Message" (Nếu có Message và không có Connect -> Thường là đã bạn bè)
+        # LinkedIn đôi khi hiện nút 'Message' to đùng khi đã là bạn bè
+        connected_indicators = [
+            "//button[contains(., 'Connected')]",
+            "//button[contains(@aria-label, 'Remove Connection')]",
+            "//span[text()='Connected']"
+        ]
+        for xpath in connected_indicators:
+            if driver.find_elements(By.XPATH, xpath):
+                print("Trạng thái: Đã kết nối.")
                 return "CONNECTED"
+
+        # 4. Kiểm tra kỹ trong menu "More"
+        try:
+            more_btn_xpath = "//button[contains(@aria-label, 'More') and contains(@class, 'artdeco-button')]"
+            more_btns = driver.find_elements(By.XPATH, more_btn_xpath)
             
-            # Nếu không thấy nút Remove, đóng menu More để tiếp tục tìm Connect
-            print("Không tìm thấy nút Remove connection trong More, sẽ thử gửi kết nối nếu có thể.")
-            webdriver.ActionChains(driver).send_keys(Keys.ESCAPE).perform()
-            time.sleep(1)
-        except:
-            pass
-        
-        # Nếu không phải Pending hoặc chưa CONNECTED hoặc chưa có nút "Remove Connection" trong More, mới tiến hành gửi connection
+            if more_btns:
+                # Tìm nút More hiển thị (đôi khi có nhiều nút More ẩn)
+                active_more = next((btn for btn in more_btns if btn.is_displayed()), None)
+                if active_more:
+                    human_click(driver, active_more)
+                    time.sleep(random.uniform(1.5, 2.5))
+                    
+                    # Tìm nút Remove Connection bằng text (Linh hoạt hơn XPath tuyệt đối)
+                    remove_xpath = "//div[@role='button' or @type='button'][contains(., 'Remove Connection') or contains(., 'Unfollow')]"
+                    if driver.find_elements(By.XPATH, remove_xpath):
+                        print("🔍 Xác nhận: Đã kết nối (Tìm thấy trong More).")
+                        ActionChains(driver).send_keys(Keys.ESCAPE).perform()
+                        return "CONNECTED"
+                    
+                    # Nếu thấy nút Connect trong More thì mới là chưa kết nối
+                    inner_connect = driver.find_elements(By.XPATH, "//div[contains(@aria-label, 'to connect')]")
+                    if not inner_connect:
+                         # Nếu không thấy cả Remove lẫn Connect trong More, có thể là đã CONNECTED
+                         # (LinkedIn đôi khi chỉ hiện 'Report/Block')
+                         pass
+
+                    ActionChains(driver).send_keys(Keys.ESCAPE).perform()
+                    time.sleep(1)
+        except Exception as e:
+            print(f"DEBUG: Lỗi khi quét menu More: {e}")
+
+        # Nếu vượt qua hết các check trên mà không return -> Bắt đầu gửi connect
         print("Trạng thái: Chưa gửi, bắt đầu gọi send_connection...")
-        res = send_connection(driver, profile_mail)
-        return res
+        return send_connection(driver, profile_mail)
 
     except Exception as e:
         print(f"❌ Lỗi tại check_connection: {str(e)}")
@@ -788,6 +832,6 @@ def main_connect():
                 valueInputOption='RAW',
                 body={'values': chunk}
             ).execute()
-            
-    driver.quit()
-    print("Đã thoát")
+    finally:
+        driver.quit()
+        print("Đã thoát")
