@@ -742,52 +742,52 @@ def main_connect():
             df.at[index, COL_STATUS] = "ERROR"
 
     # 4. CẬP NHẬT LẠI GOOGLE SHEETS DÙNG BATCH UPDATE
-    # print("📤 Đang chuẩn bị dữ liệu Batch Update...")
+    print("📤 Đang chuẩn bị dữ liệu Batch Update...")
     
-    # df_to_upload = df.fillna("") 
-    # final_values = df_to_upload.values.tolist()
+    df_to_upload = df.fillna("") 
+    final_values = df_to_upload.values.tolist()
     
-    # num_rows = len(final_values)
-    # num_cols = len(df_to_upload.columns)
-    # last_col_letter = chr(ord('A') + num_cols - 1)
+    num_rows = len(final_values)
+    num_cols = len(df_to_upload.columns)
+    last_col_letter = chr(ord('A') + num_cols - 1)
     
-    # # Định nghĩa vùng dữ liệu (Data Range)
-    # update_range = f"Sheet1!A2:{last_col_letter}{num_rows + 1}"
+    # Định nghĩa vùng dữ liệu (Data Range)
+    update_range = f"Sheet1!A2:{last_col_letter}{num_rows + 1}"
 
-    # # Cấu trúc body cho batchUpdate
-    # batch_update_values_request_body = {
-    #     'valueInputOption': 'RAW',
-    #     'data': [
-    #         {
-    #             'range': update_range,
-    #             'values': final_values
-    #         }
-    #     ]
-    # }
+    # Cấu trúc body cho batchUpdate
+    batch_update_values_request_body = {
+        'valueInputOption': 'RAW',
+        'data': [
+            {
+                'range': update_range,
+                'values': final_values
+            }
+        ]
+    }
 
-    # try:
-    #     # Sử dụng batchUpdate thay vì update thông thường
-    #     service.spreadsheets().values().batchUpdate(
-    #         spreadsheetId=SPREADSHEET_ID,
-    #         body=batch_update_values_request_body
-    #     ).execute()
-    #     print(f"✅ Batch Update thành công vùng {update_range}!")
-    # except Exception as e:
-    #     print(f"❌ Lỗi Batch Update: {e}")
-    #     # Backup plan: Nếu batch vẫn lỗi SSL, chia nhỏ để gửi (Chunking)
-    #     print("🔄 Đang thử gửi lại theo phương thức Chia nhỏ (Chunking)...")
-    #     chunk_size = 5
-    #     for i in range(0, len(final_values), chunk_size):
-    #         chunk = final_values[i : i + chunk_size]
-    #         r_start = i + 2
-    #         r_end = r_start + len(chunk) - 1
-    #         c_range = f"Sheet1!A{r_start}:{last_col_letter}{r_end}"
-    #         service.spreadsheets().values().update(
-    #             spreadsheetId=SPREADSHEET_ID,
-    #             range=c_range,
-    #             valueInputOption='RAW',
-    #             body={'values': chunk}
-    #         ).execute()
+    try:
+        # Sử dụng batchUpdate thay vì update thông thường
+        service.spreadsheets().values().batchUpdate(
+            spreadsheetId=SPREADSHEET_ID,
+            body=batch_update_values_request_body
+        ).execute()
+        print(f"✅ Batch Update thành công vùng {update_range}!")
+    except Exception as e:
+        print(f"❌ Lỗi Batch Update: {e}")
+        # Backup plan: Nếu batch vẫn lỗi SSL, chia nhỏ để gửi (Chunking)
+        print("🔄 Đang thử gửi lại theo phương thức Chia nhỏ (Chunking)...")
+        chunk_size = 5
+        for i in range(0, len(final_values), chunk_size):
+            chunk = final_values[i : i + chunk_size]
+            r_start = i + 2
+            r_end = r_start + len(chunk) - 1
+            c_range = f"Sheet1!A{r_start}:{last_col_letter}{r_end}"
+            service.spreadsheets().values().update(
+                spreadsheetId=SPREADSHEET_ID,
+                range=c_range,
+                valueInputOption='RAW',
+                body={'values': chunk}
+            ).execute()
             
-    #driver.quit()
-    # print("Đã thoát")
+    driver.quit()
+    print("Đã thoát")
