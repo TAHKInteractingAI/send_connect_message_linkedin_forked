@@ -58,6 +58,11 @@ RANGE_NAME = "Sheet1!A:E"
 GOOGLE_CREDS = os.getenv('GOOGLE_APPLICATION_CRED')
 
 """# **HÀM HỖ TRỢ**"""
+def press_multiple_tab(actions,number_of_presses, wait_time):
+    for i in range(number_of_presses):
+        actions.send_keys(Keys.TAB).perform()
+        time.sleep(wait_time)
+
 def get_missive_linkedin_code():
     response = requests.get("https://public.missiveapp.com/v1/conversations", headers=HEADERS, params=PARAMS)
     if response.status_code != 200:
@@ -167,30 +172,8 @@ def get_driver():
     
     return driver
 
-# Use ChromeDriverManager to automatically get the driver executable path #Tối ưu tự tìm ví trí chromedriver
-# service = Service(ChromeDriverManager().install())
-
-# driver = webdriver.Chrome(service=service, options=options)
-
 """# **HÀM ĐĂNG NHẬP**"""
 
-# def login_with_cookies(driver):
-#     """Đăng nhập sử dụng cookies nếu có"""
-#     driver.get("https://www.linkedin.com")
-
-#     # Kiểm tra nếu cookies tồn tại
-#     if os.path.exists(COOKIES_FILE):
-#         with open(COOKIES_FILE, "rb") as cookies_file:
-#             cookies = pickle.load(cookies_file)
-
-#         for cookie in cookies:
-#             driver.add_cookie(cookie)
-
-#         # Sau khi thêm cookies, làm mới trang để áp dụng
-#         driver.refresh()
-#         time.sleep(3)
-#         return True  # Đăng nhập thành công bằng cookies
-#     return False
 def save_cookies(driver):
     """Lưu cookies vào file"""
     with open(COOKIES_FILE, "wb") as cookies_file:
@@ -242,27 +225,6 @@ def login_with_cookie(driver):
     else:
         print("ERROR: Không tìm thấy biến môi trường LINKEDIN_COOKIE")
         return False
-    
-# def save_cookies(driver):
-#     """Lưu cookies vào file"""
-#     with open(COOKIES_FILE, "wb") as cookies_file:
-#         pickle.dump(driver.get_cookies(), cookies_file)
-#     print("INFO: COOKIES SAVED!")
-
-# def load_cookies(driver: webdriver.Chrome, file_name: str):
-#     """Đọc cookies từ file pickle và thêm vào browser"""
-#     if os.path.exists(file_name):
-#         with open(file_name, 'rb') as f:
-#             cookies = pickle.load(f)
-#             for cookie in cookies:
-#                 driver.add_cookie(cookie)
-
-# def load_credentials():
-#     """Tải thông tin đăng nhập từ file"""
-#     if os.path.exists(CREDENTIALS_FILE):
-#         with open(CREDENTIALS_FILE, "rb") as f:
-#             return pickle.load(f)
-#     return None
 
 def save_credentials(username, password):
     """Lưu thông tin đăng nhập vào file"""
@@ -307,9 +269,6 @@ def login(driver: webdriver.Chrome, username: str, password: str):
 
     driver.get("https://www.linkedin.com/login")
     time.sleep(2)  # Ensure the page is fully loaded
-
-    # Kiểm tra nếu có cookies và kiểm tra xem username, password có thay đổi không
-    #credentials = load_credentials()
 
     if os.path.exists(COOKIES_FILE):# and credentials:
         # Kiểm tra nếu username hoặc password đã thay đổi
@@ -364,18 +323,19 @@ def login(driver: webdriver.Chrome, username: str, password: str):
     #save_credentials(username, password)
     print("INFO: Đăng nhập thành công và đã lưu cookies, thông tin đăng nhập!")
     driver.save_screenshot("post-login.png")
-    # user_icon = WebDriverWait(driver, 10).until(
-    #                 EC.presence_of_element_located((By.CLASS_NAME, 'global-nav__me-photo')))
-    # # save user_icon
-    # user_icon.screenshot("user_icon.png")
-    # display_screenshot(driver, "status.png")
-    # display_full_screenshot(driver)
 
 
 """# **XPATH**"""
 
 # XPATH ỨNG VỚI NÚT CONNECT.
-#XPATH_MAIN_CONNECT = "//main//a[contains(@aria-label, 'Invite') or contains(@aria-label, 'Connect')]"
+XPATH_MAIN_CONNECT = (
+            # "//main//a[contains(@class, 'profile-top-card')]//button[contains(@aria-label, 'to connect')]"
+            # "| //main//a[contains(@class, 'profile-top-card')]//a[contains(@aria-label, 'to connect')]"
+            "/html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/section/div/div/div[2]/div[3]/div/div/div[1]/div/div/a"
+            "| /html/body/div[6]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/button[contains(@aria-label, 'to connect')]"
+            "| //main//button[./span[text()='Connect']]"
+            "| //main//a[contains(., 'Connect')]"
+        )
 
 # XPATH ỨNG VỚI NÚT MESSAGE.
 STATUS_MESSAGE = "/html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/div/section/div/div/div[2]/div[3]/div/div/div[1]/a"#"/html/body/div/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[1]/button"
@@ -383,7 +343,7 @@ STATUS_MESSAGE = "/html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/di
 XPATH_MORE_BTN_MAIN = "//main//button[contains(@aria-label, 'More')]"
 
 # XPATH ỨNG VỚI NÚT UNCONNECT KHI NHẤN NÚT MORE.
-XPATH_MORE_CONNECT = "/html/body/div[2]/div/div/div[3]/div/div/a | /html/body/div[2]/div/div/div[3]/div/div/button[contains(@aria-label, 'to connect')] | /html/body/div[5]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[2]/div/div/ul/li[3]/div[contains(@aria-label, 'to connect') or contains(@role, 'button')] | /html/body/div[6]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[2]/div/div/ul/li[3]/div[contains(@aria-label, 'to connect') or contains(@role, 'button')]" #Đổi sang full XPATH (dễ lỗi hơn nếu có updated từ linkedin)
+XPATH_MORE_CONNECT = "/html/body/div[2]/div/div/div[3]/div/div/a | /html/body/div[2]/div/div/div[3]/div/div/button[contains(@aria-label, 'to connect')] | /html/body/div[5]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[2]/div/div/ul/li[3]/div[contains(@aria-label, 'to connect')] | /html/body/div[6]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[2]/div/div/ul/li[3]/div[contains(@aria-label, 'to connect')]" #Đổi sang full XPATH (dễ lỗi hơn nếu có updated từ linkedin)
 
 # XPATH để tìm nút Connected hoặc trạng thái đã kết nối ở màn hình chính
 XPATH_CONNECTED_MAIN = "//main//button[contains(., 'Connected')] | //main//div[contains(@aria-label, 'Connected')]"
@@ -391,25 +351,77 @@ XPATH_CONNECTED_MAIN = "//main//button[contains(., 'Connected')] | //main//div[c
 # XPATH tìm nút Remove Connection bên trong menu More
 XPATH_MORE_REMOVE_CONNECTION = "/html/body/div[2]/div/div/div[6]/div/div/div/div/div/p"
 
-# XPATH ỨNG VỚI NÚT ADD A NOTE.
-BUTTON_ADD_NOTE = "/html/body/div[3]/div/div/div[3]/button[1]"
+# ========================== XPATH/SCRIPT ỨNG VỚI CÁC NÚT ADD EMAIL_NOTE ==========================
+#XPATH_BUTTON_ADD_NOTE = "/html/body/div[3]/div/div/div[3]/button[1]"
+
+#XPATH_NOTE_LABEL = "/html/body/div/div[4]//div/div[1]/div/div/div[2]/label"
+XPATH_NOTE_LABEL =  """
+            function findLabelByText(text) {
+                // Hàm này sẽ quét xuyên qua cả Shadow DOM nếu cần
+                function search(root) {
+                    const labels = root.querySelectorAll('label');
+                    for (const lb of labels) {
+                        if (lb.textContent.includes(text)) return lb;
+                    }
+                    
+                    // Tìm tiếp trong các shadowRoot khác
+                    const all = root.querySelectorAll('*');
+                    for (const el of all) {
+                        if (el.shadowRoot) {
+                            const found = search(el.shadowRoot);
+                            if (found) return found;
+                        }
+                    }
+                    return null;
+                }
+                return search(document);
+            }
+            return findLabelByText('To verify this member');
+            """
+
+
 # XPATH ỨNG VỚI KHUNG NHẬP NOTE.
-TEXTAREA_NOTE = [
-    "/html/body/div[3]/div/div/div[3]/div[1]/textarea",         # NORMAL ACCOUNT.
-    "/html/body/div[3]/div/div/div[2]/div[2]/div[1]/textarea"   # PREMIUM ACCOUNT.
-]
+# TEXTAREA_NOTE = [
+#     "/html/body/div[3]/div/div/div[3]/div[1]/textarea",         # NORMAL ACCOUNT.
+#     "/html/body/div[3]/div/div/div[2]/div[2]/div[1]/textarea"   # PREMIUM ACCOUNT.
+# ]
 # XPATH ỨNG VỚI NÚT GỬI NOTE.
 BUTTON_SEND_NOTE = [
     "/html/body/div[3]/div/div/div[4]/button[2]",               # NORMAL ACCOUNT.
     "/html/body/div[3]/div/div/div[3]/button[3]"                # PREMIUM ACCOUNT.
 ]
 # XPATH ỨNG VỚI NÚT GỬI CONNECT MÀ KHÔNG DÙNG NOTE.
-XPATH_SEND_WITHOUT_NOTE = ".//button[contains(@aria-label, 'without a note')]"#"//button[contains(., 'Send without a note') or contains(@aria-label, 'Send without a note') or contains(., 'Send now')]"
-XPATH_SEND_BACKUP = ".//span[contains(normalize-space(), 'without a note')]/parent::button"
+# XPATH_SEND_WITHOUT_NOTE = ".//button[contains(@aria-label, 'without a note')]"#"//button[contains(., 'Send without a note') or contains(@aria-label, 'Send without a note') or contains(., 'Send now')]"
+# XPATH_SEND_BACKUP = ".//span[contains(normalize-space(), 'without a note')]/parent::button"
 # XPATH ỨNG VỚI NÚT GỬI CONNECT MÀ DÙNG NOTE.
-TEXTFIELD_VERIFY_NOTE = "/html/body/div[3]/div/div/div[2]/label/input"
+
+#TEXTFIELD_VERIFY_NOTE = "//div[3]//input[@type='email'] | //div[4]//input[@type='email']"#"/html/body/div[3]/div/div/div[2]/label/input[contains(@name, 'email') and contains(@type, 'email)] | /html/body/div[4]/div/div/div[2]/label/input[contains(@name, 'email') and contains(@type, 'email)]"
+TEXTFIELD_VERIFY_NOTE  = """
+function findElementInShadows(selector) {
+    // Hàm tìm kiếm đệ quy xuyên qua các tầng Shadow DOM
+    function search(root) {
+        // Kiểm tra trong root hiện tại (có thể là document hoặc một shadowRoot)
+        const el = root.querySelector(selector);
+        if (el) return el;
+
+        // Nếu không thấy, tìm tất cả các phần tử có shadowRoot để quét tiếp
+        const allElements = root.querySelectorAll('*');
+        for (const element of allElements) {
+            if (element.shadowRoot) {
+                const found = search(element.shadowRoot);
+                if (found) return found;
+            }
+        }
+        return null;
+    }
+    return search(document);
+}
+
+return findElementInShadows('input[name="email"][type="email"]');
+"""
+
 # XPATH để nhận diện xem Modal "Add a note" có đang hiển thị hay không
-XPATH_MODAL_TITLE = "//h2[contains(., 'Add a note')]"
+# XPATH_MODAL_TITLE = "//h2[contains(., 'Add a note')]"
 
 """# **HÀM GỬI KẾT NỐI**"""
 
@@ -428,18 +440,6 @@ def check_status(driver: webdriver.Chrome, xpath: str, *kws):
     return False
 
 
-# def check_status_in_more(driver):
-#     # Kiểm tra nếu có nút Hủy kết nối (Nghĩa là ĐÃ CONNECTED)
-#     if check_status(driver, MORE_CONNECT, "Remove", "Disconnect", "Unfollow"):
-#         return "CONNECTED"
-    
-#     # Kiểm tra nếu có nút Invite (Nghĩa là CHƯA CONNECT)
-#     if check_status(driver, MORE_UNCONNECT, "Invite", "Connect"):
-#         return "UNCONNECTED"
-        
-#     return "UNKNOWN"  # Giá trị trả về mặc định
-
-
 def find_element_in_list(driver: webdriver.Chrome, e_list: list[str]):
     for e in e_list:
         try:
@@ -449,60 +449,6 @@ def find_element_in_list(driver: webdriver.Chrome, e_list: list[str]):
         except Exception as e:
             print(f"An error occurred: {e}")
     return None
-# def send_connection(driver: webdriver.Chrome):
-#     try:
-#         wait = WebDriverWait(driver, 10)
-#         actions = webdriver.ActionChains(driver)
-#         connect_btn = None
-#         # Bước 1 & 2: Click nút Connect chính
-#         try:
-#             xpath_connect = "//main//a[contains(., 'Connect')] | //main//button[contains(., 'Connect')] | //main//a[contains(@aria-label, 'Invite') and contains(@aria-label, 'to connect')] | //main//button[contains(@aria-label, 'Invite') and contains(@aria-label, 'to connect')]"
-#             connect_btn = wait.until(EC.element_to_be_clickable((By.XPATH, xpath_connect)))
-#             print(f"tìm được từ ngoài: {connect_btn}")
-#         except TimeoutException:
-#             print("Không tìm thấy nút Connect bên ngoài, đang tìm nút bên trong...")
-#         if not connect_btn: #Nếu không tìm thấy nút connect bên ngoài
-#             try:
-#                 more_btn = wait.until(EC.element_to_be_clickable((By.XPATH, XPATH_MORE_BTN_MAIN)))
-#                 driver.execute_script("arguments[0].click();", more_btn)
-#                 print("Đã ấn nút More")
-#                 time.sleep(2)
-#                 connect_btn = wait.until(EC.element_to_be_clickable((By.XPATH, XPATH_MORE_CONNECT)))
-#                 print(f"tìm được từ trong: {connect_btn}")
-#             except TimeoutException:
-#                 print("Không tìm thấy nút Connect bên trong.")
-#                 return "FAILED"
-#         driver.execute_script("arguments[0].click();", connect_btn)
-#         print("🖱️ Bước 2: Đã Click nút Connect.")
-
-#         # Bước 3: Đợi Modal Container xuất hiện thực sự
-#         print("⏳ Bước 3: Đang đợi Modal xuất hiện...")
-#         #modal = wait.until(EC.presence_of_element_located((By.XPATH, XPATH_MODAL_CONTAINER)))
-#         time.sleep(3) # Đợi animation của LinkedIn chạy xong
-#         actions.send_keys(Keys.ENTER).perform()
-#         # Bước 4: Nhấn Tab 3 lần và Enter
-#         print("⌨️ Bước 4: Đang thực hiện Tab -> Tab -> Tab -> Enter...")
-        
-#         for i in range(3):
-#             actions.send_keys(Keys.TAB).perform()
-#             time.sleep(random.uniform(1, 3)) # Nghỉ random giữa các lần
-#             print(f"   - Đã nhấn Tab lần {i+1}")
-#         time.sleep(3)
-#         #actions.key_down(Keys.ENTER).pause(0.5).key_up(Keys.ENTER).perform()
-#         actions.send_keys(Keys.SPACE).perform()
-#         print("✅ Bước 5: Đã nhấn Enter để gửi!")
-        
-#         # Đợi 2s xem Modal có biến mất không để xác nhận thành công
-#         time.sleep(5)
-#         # Thoát pop-up verify account
-#         actions.send_keys(Keys.ESCAPE).perform()
-#         return "SUCCESS"
-                
-#     except Exception as e:
-#         print(f"❌ Lỗi tại send_connection: {str(e)}")
-#         # Nếu bị kẹt, nhấn ESC để thoát Modal cho dòng tiếp theo
-#         webdriver.ActionChains(driver).send_keys(Keys.ESCAPE).perform()
-#         return "FAILED"
 def press_space_with_backup(sleep_time, actions, driver):
     # 1. Thử dùng ActionChains với phím
     actions.send_keys(Keys.SPACE).perform()
@@ -528,25 +474,16 @@ def press_space_with_backup(sleep_time, actions, driver):
     
     success = driver.execute_script(script_click)
     return success
-    
-def send_connection(driver: webdriver.Chrome):
+
+def send_connection(driver: webdriver.Chrome, profile_mail: str):
     try:
         wait = WebDriverWait(driver, 10)
         actions = webdriver.ActionChains(driver)
         connect_btn = None
 
-        # Bước 1: Tìm nút Connect bên ngoài
-        xpath_connect = (
-            # "//main//a[contains(@class, 'profile-top-card')]//button[contains(@aria-label, 'to connect')]"
-            # "| //main//a[contains(@class, 'profile-top-card')]//a[contains(@aria-label, 'to connect')]"
-            "/html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/section/div/div/div[2]/div[3]/div/div/div[1]/div/div/a"
-            "| /html/body/div[6]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/button[contains(@aria-label, 'to connect')]"
-            "| //main//button[./span[text()='Connect']]"
-            "| //main//a[contains(., 'Connect')]"
-        )
-        
+        # Bước 1: Tìm nút Connect bên ngoài        
         try:
-            connect_btn = wait.until(EC.element_to_be_clickable((By.XPATH, xpath_connect)))
+            connect_btn = wait.until(EC.element_to_be_clickable((By.XPATH, XPATH_CONNECTED_MAIN)))
             print(f"✅ Tìm thấy nút Connect từ ngoài: {connect_btn.tag_name}, {connect_btn.text}")
         except TimeoutException:
             print("🔍 Không thấy nút bên ngoài, thử tìm trong More...")
@@ -560,7 +497,7 @@ def send_connection(driver: webdriver.Chrome):
                 time.sleep(2)
                 print(f"Start finding {XPATH_MORE_CONNECT}")
                 connect_btn = wait.until(EC.element_to_be_clickable((By.XPATH, XPATH_MORE_CONNECT)))
-                print(f"✅ Tìm thấy nút Connect/Pending trong More: {connect_btn.tag_name}, {connect_btn.text}")
+                print(f"✅ Tìm thấy nút Connect/Pending trong More: {connect_btn.tag_name}, {connect_btn.text}, {connect_btn.get_attribute('aria-label')}")
                 if connect_btn.text == "Pending":
                     print("🔄 Nút đang chờ xác nhận (Pending).")
                     return "ALREADY PENDED"                
@@ -568,9 +505,7 @@ def send_connection(driver: webdriver.Chrome):
                 print("❌ Không tìm thấy nút Connect ở bất cứ đâu, bắt đầu dùng actionChains.")
                 #Dùng biện pháp cuối với actionChains
                 try:
-                    for i in range(3):
-                        actions.send_keys(Keys.TAB).perform()
-                        time.sleep(random.uniform(0.25, 0.5))
+                    press_multiple_tab(actions, 3, random.uniform(0.25, 0.5))
                     cur_element = driver.switch_to.active_element.text
                     print(f"Current element text: {cur_element}")
                     if cur_element != "Connect" and cur_element != "Invite":
@@ -586,9 +521,7 @@ def send_connection(driver: webdriver.Chrome):
                         print("🔍 Thử click vào active_element hiện tại...")
                         driver.execute_script("arguments[0].click();", driver.switch_to.active_element)
                     #Đi vào Modal xác nhận
-                    for i in range(3):
-                        actions.send_keys(Keys.TAB).perform()
-                        time.sleep(0.5)
+                    press_multiple_tab(actions, 3, 0.5)
                     # actions.send_keys(Keys.SPACE).perform()
                     # time.sleep(2)
                     # print("🚀 Đã gửi yêu cầu kết nối thành công!")
@@ -609,26 +542,70 @@ def send_connection(driver: webdriver.Chrome):
         # Bước 3: Click vào nút Connect
         driver.execute_script("arguments[0].click();", connect_btn) #Thay đổi thành arguments[0]
         print("🖱️ Đã Click nút Connect. Đang đợi Modal...")
-        
         time.sleep(5) # Đợi popup hiện ra
+
+        # Bước 4.1: Xử lý Modal gửi kết nối khi cần mail note xác thực (Thao tác phím để tránh lỗi XPath popup)
+        try:
+            # label_note = wait.until(EC.presence_of_element_located((By.XPATH, XPATH_NOTE_LABEL)))            
+            label_note = driver.execute_script(XPATH_NOTE_LABEL)
+            print(f"Tìm thấy label note: {label_note.tag_name} | {label_note.text} | {label_note.aria_role}")
+            #Thử với actionChains
+            press_multiple_tab(actions, 3, 0.5) #vào ô popup -> vào learnmore -> vào ô nhập
+            actions.send_keys(profile_mail).perform()
+            time.sleep(2)
+            press_multiple_tab(actions, 2, 0.5) #vào nút "Send a note" -> Vào nút "Send without a note"
+            actions.send_keys(Keys.SPACE).perform()
+            time.sleep(2)
+            return "START PENDING"
+            # try:
+            #     #driver.execute_script("arguments[0].click();", driver.find_element(By.XPATH, TEXTFIELD_VERIFY_NOTE))
+            #     textfield_note = driver.execute_script(TEXTFIELD_VERIFY_NOTE)
+            #     driver.execute_script("arguments[0].click();", textfield_note)
+            #     print(f"Tìm thấy ô nhập note xác thực email: {driver.switch_to.active_element.tag_name}, đã click vào ô nhập.")
+            #     if profile_mail != "":
+            #         actions.send_keys(profile_mail).perform()
+            #         time.sleep(2)
+            #         try:
+            #             wait.until(EC.element_to_be_clickable((By.XPATH, BUTTON_SEND_NOTE[0]))).click()
+            #             print(f"🚀 Đã gửi yêu cầu kết nối thành công với note xác thực email: {profile_mail}!")
+            #             time.sleep(3)
+            #         except Exception as e:
+            #             print(f"Không tìm thấy nút gửi ghi chú: {str(e)}, tiến hành Actionchains để gửi")
+            #             press_multiple_tab(actions, 2, 0.5)
+            #             actions.send_keys(Keys.SPACE).perform()
+            #             time.sleep(3)
+            #             return "START PENDING"
+            #     else:
+            #         print(f"Không tìm thấy email xác thực: {profile_mail}.")
+            #         return "FAILED"
+            # except Exception as e:
+            #     print(f"❌ Lỗi khi click vào nút textfield ghi chú: {str(e)}, bắt đầu dùng ActionChains")
+            #     press_multiple_tab(actions, 3, 0.5)
+            #     print(f"Đi đến ô nhập mail: {driver.switch_to.active_element.tag_name} - {driver.switch_to.active_element.aria_role}.")
+            #     actions.send_keys(profile_mail).perform()
+            #     time.sleep(2)
+            #     press_multiple_tab(actions, 2, 0.5)
+            #     actions.send_keys(Keys.SPACE).perform()
+            #     time.sleep(3)
+            #     return "START PENDING"
+            
+        except Exception as e:
+            print(f"Không tìm thấy Modal mail note xác thực: {e}, vào bước 4.2")
+            # Bước 4.2: Xử lý Modal gửi kết nối khi không cần mail note xác thực (Thao tác phím để tránh lỗi XPath popup) 
+            press_multiple_tab(actions, 3, 0.5)
+            actions.send_keys(Keys.SPACE).perform()
+            print("🚀 Đã gửi yêu cầu kết nối thành công!")
+            time.sleep(2)
+            actions.send_keys(Keys.ESCAPE).perform()
+            return "START PENDING"                
         
-        # Bước 4: Xử lý Modal gửi kết nối (Thao tác phím để tránh lỗi XPath popup)
-        for i in range(3):
-            actions.send_keys(Keys.TAB).perform()
-            time.sleep(1)
-        actions.send_keys(Keys.SPACE).perform()
-        print("🚀 Đã gửi yêu cầu kết nối thành công!")
-        
-        time.sleep(2)
-        actions.send_keys(Keys.ESCAPE).perform()
-        return "START PENDING"
                 
     except Exception as e:
         print(f"❌ Lỗi tại send_connection: {str(e)}")
         actions.send_keys(Keys.ESCAPE).perform()
         return "FAILED"
     
-def check_connection(driver: webdriver.Chrome, email: str = ""):
+def check_connection(driver: webdriver.Chrome, profile_mail: str = ""):
     try:
         # Sử dụng find_elements (số nhiều) để không bị crash nếu không tìm thấy
         # Chỉ kiểm tra nhanh trong 2-3 giây
@@ -669,51 +646,13 @@ def check_connection(driver: webdriver.Chrome, email: str = ""):
         
         # Nếu không phải Pending hoặc chưa CONNECTED hoặc chưa có nút "Remove Connection" trong More, mới tiến hành gửi connection
         print("Trạng thái: Chưa gửi, bắt đầu gọi send_connection...")
-        res = send_connection(driver)
+        res = send_connection(driver, profile_mail)
         return res
 
     except Exception as e:
         print(f"❌ Lỗi tại check_connection: {str(e)}")
         return f"ERROR: {str(e)}"
         
-# def check_connection(driver: webdriver.Chrome, email: str, note: str = None):
-#     try:
-#         # 1. Kiểm tra nếu đã là bạn bè (Có nút Message/Follow)
-#         if check_status(driver, STATUS_MESSAGE, "Message", "Following"):
-#             print("STATUS: ALREADY CONNECTED")
-#             return "CONNECTED"
-
-#         # 2. Kiểm tra trạng thái đang chờ (Pending)
-#         if check_status(driver, STATUS_CONNECT, "Pending", "Withdraw"):
-#             print("STATUS: PENDING")
-#             return "PENDING"
-
-#         # 3. Kiểm tra nút Connect trực diện
-#         if check_status(driver, STATUS_CONNECT, "Invite", "Connect"):
-#             status = send_connection(driver, STATUS_CONNECT)
-#             return status
-
-#         # 4. Nếu không thấy gì, thử tìm trong nút MORE
-#         print("CHECKING IN MORE...", end=" ")
-#         try:
-#             button_more = WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, BUTTON_MORE)))
-#             button_more.click()
-#             time.sleep(1)
-#             status_in_more = check_status_in_more(driver)
-            
-#             if status_in_more == "UNCONNECTED":
-#                 return send_connection(driver, MORE_UNCONNECT)
-#             return status_in_more
-            
-#         except Exception:
-#             print("Nút More không tương tác được hoặc không có.")
-            
-#         return "CONNECTED" # Default cuối cùng nếu thấy nút Message nhưng không check được trong More
-
-#     except Exception as e:
-#         print(f"ERROR: {e}")
-#         return "ERROR: UNKNOWN"
-
 def main_connect():
     #restore_cookie_from_secret()
     
@@ -725,13 +664,6 @@ def main_connect():
         print("ERROR: Không có dữ liệu trong Sheet")
         return
     headers = values[0]
-    # Đảm bảo tất cả các dòng có số cột bằng với header
-    # data = []
-    # for row in values[1:]:
-    #     # Làm đầy các cột thiếu bằng chuỗi rỗng
-    #     padded_row = row + [""] * (len(headers) - len(row))
-    #     data.append(padded_row)
-    # ĐẢM BẢO headers có ít nhất 5 cột nếu bạn dùng index 3 và 4
     required_min_cols = 5 
     if len(headers) < required_min_cols:
         headers += [f"Column_{i}" for i in range(len(headers), required_min_cols)]
@@ -760,12 +692,8 @@ def main_connect():
         print("===========================START==================================")
         if send_count >= MAX_LIMIT:
             break
-        
-        # Làm sạch dữ liệu để tránh lỗi khoảng trắng
-        # current_dropdown = str(row.get(COL_DROPDOWN, "")).strip().lower()
-        # current_status_text = str(row.get(COL_STATUS, "")).strip().upper()
-        # profile_link = str(row.get('Linkedin', "")).strip()
         profile_link = str(row.iloc[0]).strip()
+        profile_mail = str(row.iloc[1]).strip()
         current_status_text = str(row.iloc[3]).strip().upper()
         current_dropdown = str(row.iloc[2]).strip().lower()
 
@@ -793,8 +721,8 @@ def main_connect():
                 continue
             driver.save_screenshot(f"before_check_index{index}.png")
             # Kiểm tra và gửi connect
-            email_to_fill = row.get("Email để điền khi gặp câu hỏi trog lúc connect", "")
-            status = check_connection(driver, email_to_fill)
+            #email_to_fill = row.get("Email để điền khi gặp câu hỏi trog lúc connect", "")
+            status = check_connection(driver, profile_mail)
             
             # Cập nhật DataFrame
             #df.at[index, COL_STATUS] = status
@@ -814,52 +742,52 @@ def main_connect():
             df.at[index, COL_STATUS] = "ERROR"
 
     # 4. CẬP NHẬT LẠI GOOGLE SHEETS DÙNG BATCH UPDATE
-    print("📤 Đang chuẩn bị dữ liệu Batch Update...")
+    # print("📤 Đang chuẩn bị dữ liệu Batch Update...")
     
-    df_to_upload = df.fillna("") 
-    final_values = df_to_upload.values.tolist()
+    # df_to_upload = df.fillna("") 
+    # final_values = df_to_upload.values.tolist()
     
-    num_rows = len(final_values)
-    num_cols = len(df_to_upload.columns)
-    last_col_letter = chr(ord('A') + num_cols - 1)
+    # num_rows = len(final_values)
+    # num_cols = len(df_to_upload.columns)
+    # last_col_letter = chr(ord('A') + num_cols - 1)
     
-    # Định nghĩa vùng dữ liệu (Data Range)
-    update_range = f"Sheet1!A2:{last_col_letter}{num_rows + 1}"
+    # # Định nghĩa vùng dữ liệu (Data Range)
+    # update_range = f"Sheet1!A2:{last_col_letter}{num_rows + 1}"
 
-    # Cấu trúc body cho batchUpdate
-    batch_update_values_request_body = {
-        'valueInputOption': 'RAW',
-        'data': [
-            {
-                'range': update_range,
-                'values': final_values
-            }
-        ]
-    }
+    # # Cấu trúc body cho batchUpdate
+    # batch_update_values_request_body = {
+    #     'valueInputOption': 'RAW',
+    #     'data': [
+    #         {
+    #             'range': update_range,
+    #             'values': final_values
+    #         }
+    #     ]
+    # }
 
-    try:
-        # Sử dụng batchUpdate thay vì update thông thường
-        service.spreadsheets().values().batchUpdate(
-            spreadsheetId=SPREADSHEET_ID,
-            body=batch_update_values_request_body
-        ).execute()
-        print(f"✅ Batch Update thành công vùng {update_range}!")
-    except Exception as e:
-        print(f"❌ Lỗi Batch Update: {e}")
-        # Backup plan: Nếu batch vẫn lỗi SSL, chia nhỏ để gửi (Chunking)
-        print("🔄 Đang thử gửi lại theo phương thức Chia nhỏ (Chunking)...")
-        chunk_size = 5
-        for i in range(0, len(final_values), chunk_size):
-            chunk = final_values[i : i + chunk_size]
-            r_start = i + 2
-            r_end = r_start + len(chunk) - 1
-            c_range = f"Sheet1!A{r_start}:{last_col_letter}{r_end}"
-            service.spreadsheets().values().update(
-                spreadsheetId=SPREADSHEET_ID,
-                range=c_range,
-                valueInputOption='RAW',
-                body={'values': chunk}
-            ).execute()
+    # try:
+    #     # Sử dụng batchUpdate thay vì update thông thường
+    #     service.spreadsheets().values().batchUpdate(
+    #         spreadsheetId=SPREADSHEET_ID,
+    #         body=batch_update_values_request_body
+    #     ).execute()
+    #     print(f"✅ Batch Update thành công vùng {update_range}!")
+    # except Exception as e:
+    #     print(f"❌ Lỗi Batch Update: {e}")
+    #     # Backup plan: Nếu batch vẫn lỗi SSL, chia nhỏ để gửi (Chunking)
+    #     print("🔄 Đang thử gửi lại theo phương thức Chia nhỏ (Chunking)...")
+    #     chunk_size = 5
+    #     for i in range(0, len(final_values), chunk_size):
+    #         chunk = final_values[i : i + chunk_size]
+    #         r_start = i + 2
+    #         r_end = r_start + len(chunk) - 1
+    #         c_range = f"Sheet1!A{r_start}:{last_col_letter}{r_end}"
+    #         service.spreadsheets().values().update(
+    #             spreadsheetId=SPREADSHEET_ID,
+    #             range=c_range,
+    #             valueInputOption='RAW',
+    #             body={'values': chunk}
+    #         ).execute()
             
-    driver.quit()
-    print("Đã thoát")
+    #driver.quit()
+    # print("Đã thoát")
