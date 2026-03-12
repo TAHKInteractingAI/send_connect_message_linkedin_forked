@@ -514,62 +514,89 @@ def send_connection(driver: webdriver.Chrome, profile_mail: str):
         try:
             connect_btn = wait.until(EC.element_to_be_clickable((By.XPATH, XPATH_MAIN_CONNECT)))
             print(f"✅ Tìm thấy nút Connect từ ngoài: {connect_btn.tag_name}, {connect_btn.text}")
+            driver.execute_script("arguments[0].click();", connect_btn) #Thay đổi thành arguments[0]
         except TimeoutException:
             print("🔍 Không thấy nút bên ngoài, thử tìm trong More...")
 
         # Bước 2: Nếu không thấy, tìm trong More
         if not connect_btn:
-            try:
-                more_btn = wait.until(EC.element_to_be_clickable((By.XPATH, XPATH_MORE_BTN_MAIN)))
-                driver.execute_script("arguments[0].click();", more_btn) #Thay đổi thành arguments[0]
-                print("Đã ấn More")
-                time.sleep(2)
-                print(f"Start finding {XPATH_MORE_CONNECT}")
-                connect_btn = wait.until(EC.element_to_be_clickable((By.XPATH, XPATH_MORE_CONNECT)))
-                print(f"✅ Tìm thấy nút Connect/Pending trong More: {connect_btn.tag_name}, {connect_btn.text}, {connect_btn.get_attribute('aria-label')}")
-                if connect_btn.text == "Pending":
-                    print("🔄 Nút đang chờ xác nhận (Pending).")
-                    return "ALREADY PENDED"                
-            except TimeoutException:
-                print("❌ Không tìm thấy nút Connect ở bất cứ đâu, bắt đầu dùng actionChains.")
-                #Dùng biện pháp cuối với actionChains
+            #try:
+            more_btn = wait.until(EC.element_to_be_clickable((By.XPATH, XPATH_MORE_BTN_MAIN)))
+            driver.execute_script("arguments[0].click();", more_btn) #Thay đổi thành arguments[0]
+            print("Đã ấn More")
+            time.sleep(2)                
+                # #more_btn_xpath = "//button[contains(@aria-label, 'More') and contains(@class, 'artdeco-button')]"
+                # #remove_xpath = "//div[@role='button' or @type='button'][contains(., 'Remove Connection') or contains(., 'Unfollow')]"
+                # if driver.find_elements(By.XPATH, XPATH_MORE_REMOVE_CONNECTION):
+                #     print("Trạng thái: Đã kết nối. (Tìm thấy trong More).")
+                #     ActionChains(driver).send_keys(Keys.ESCAPE).perform()
+                #     return "CONNECTED"
+                # if connect_btn.text == "Pending":
+                #     print("🔄 Nút đang chờ xác nhận (Pending).")
+                #     return "ALREADY PENDED"    
+                
+                # print(f"Start finding {XPATH_MORE_CONNECT}")
+                # connect_btn = wait.until(EC.element_to_be_clickable((By.XPATH, XPATH_MORE_CONNECT)))
+                #print(f"✅ Tìm thấy nút Connect trong More: {connect_btn.tag_name}, {connect_btn.text}, {connect_btn.get_attribute('aria-label')}")
+                             
+            #except TimeoutException:
+            print("Không tìm thấy nút Connect ở bất cứ đâu, bắt đầu dùng actionChains.")
+                #Dùng vòng lặp While, detect từng li_item.text trong more modal, nếu pending return "ALREADY PENDED", nếu REMOVE/UNFOLLOW return "CONNECTED", nếu thấy CONNECT thì bấm, còn không thấy gì thì thoát ra và return "FAILED"
+            in_more = True
+            while in_more:
                 try:
-                    press_multiple_tab(actions, 3, random.uniform(0.25, 0.5))
-                    cur_element = driver.switch_to.active_element.text
-                    print(f"Current element text: {cur_element}")
-                    if cur_element != "Connect" and cur_element != "Invite":
-                        actions.send_keys(Keys.TAB).perform()
-                        time.sleep(random.uniform(0.25, 0.3))
-                    # actions.send_keys(Keys.SPACE).perform()
-                    # time.sleep(1)
-                    success = press_space_with_backup(2, actions, driver)
-                    if success:
-                        print("🚀 JavaScript đã ép gửi thành công!")
-                    else:
-                        # Nếu không tìm thấy nút bằng text, thử click vào phần tử đang focus
-                        print("🔍 Thử click vào active_element hiện tại...")
-                        driver.execute_script("arguments[0].click();", driver.switch_to.active_element)
-                    #Đi vào Modal xác nhận
-                    press_multiple_tab(actions, 3, 0.5)
-                    # actions.send_keys(Keys.SPACE).perform()
-                    # time.sleep(2)
-                    # print("🚀 Đã gửi yêu cầu kết nối thành công!")
-                    # return "START PENDING"
-                    success = press_space_with_backup(2, actions, driver)
-                    if success:
-                        print("🚀 JavaScript đã ép gửi thành công!")
-                        return "START PENDING"
-                    else:
-                        # Nếu không tìm thấy nút bằng text, thử click vào phần tử đang focus
-                        print("🔍 Thử click vào active_element hiện tại...")
-                        driver.execute_script("arguments[0].click();", driver.switch_to.active_element)
-                        return "START PENDING"    
+                    actions.send_keys(Keys.TAB).perform()
+                    time.sleep(random.uniform(0.25, 0.3))
+                    cur_element = driver.switch_to.active_element
+                    cur_element_text = cur_element.text
+                    print(f"Current element text: {cur_element_text}")
+                    if cur_element_text == "Pending":
+                        print("Trạng thái: Đang chờ xác nhận (Pending). Tìm thấy Pending từ trong More")
+                        ActionChains(driver).send_keys(Keys.ESCAPE).perform()
+                        return "ALREADY PENDED"
+                    if cur_element_text in ["Remove Connection", "Unfollow"]:
+                        print(f"Trạng thái: Đã kết nối.Tìm thấy từ trong More")
+                        ActionChains(driver).send_keys(Keys.ESCAPE).perform()
+                        return "CONNECTED"
+                    if cur_element_text in ["Connect", "Connect with note"]:
+                        print(f"Trạng thái: Chưa kết nối. Tìm thấy nút Connect từ trong More, chuẩn bị click.")
+                        driver.execute_script("arguments[0].click();", cur_element)
+                        in_more = False                        
+                #     if cur_element_text in ["Request a recommendation"]:
+                #         print("")
+                #     if cur_element_text != "Connect" and cur_element_text != "Invite":
+                #         actions.send_keys(Keys.TAB).perform()
+                #         time.sleep(random.uniform(0.25, 0.3))
+                #     # actions.send_keys(Keys.SPACE).perform()
+                #     # time.sleep(1)
+                #     success = press_space_with_backup(2, actions, driver)
+                #     if success:
+                #         print("🚀 JavaScript đã ép gửi thành công!")
+                #     else:
+                #         # Nếu không tìm thấy nút bằng text, thử click vào phần tử đang focus
+                #         print("🔍 Thử click vào active_element hiện tại...")
+                #         driver.execute_script("arguments[0].click();", driver.switch_to.active_element)
+                #     #Đi vào Modal xác nhận
+                #     press_multiple_tab(actions, 3, 0.5)
+                #     # actions.send_keys(Keys.SPACE).perform()
+                #     # time.sleep(2)
+                #     # print("🚀 Đã gửi yêu cầu kết nối thành công!")
+                #     # return "START PENDING"
+                #     success = press_space_with_backup(2, actions, driver)
+                #     if success:
+                #         print("🚀 JavaScript đã ép gửi thành công!")
+                #         return "START PENDING"
+                #     else:
+                #         # Nếu không tìm thấy nút bằng text, thử click vào phần tử đang focus
+                #         print("🔍 Thử click vào active_element hiện tại...")
+                #         driver.execute_script("arguments[0].click();", driver.switch_to.active_element)
+                #         return "START PENDING"    
                 except Exception as e:
                     print(f"❌ Lỗi tại actionChains: {str(e)}")
                     return "FAILED"
 
         # Bước 3: Click vào nút Connect
-        driver.execute_script("arguments[0].click();", connect_btn) #Thay đổi thành arguments[0]
+        
         print("🖱️ Đã Click nút Connect. Đang đợi Modal...")
         time.sleep(5) # Đợi popup hiện ra
 
@@ -583,8 +610,14 @@ def send_connection(driver: webdriver.Chrome, profile_mail: str):
             actions.send_keys(profile_mail).perform()
             time.sleep(2)
             press_multiple_tab(actions, 2, 0.5) #vào nút "Send a note" -> Vào nút "Send without a note"
+            print(f"Nút hiện tại: {driver.switch_to.active_element.tag_name} | {driver.switch_to.active_element.text} | {driver.switch_to.active_element.aria_role}")
             actions.send_keys(Keys.SPACE).perform()
-            time.sleep(2)
+            time.sleep(3)
+            failed_alert_popup = driver.find_element(By.XPATH, "/html/body/div/section/div[1]/div/div[1]/div/div/p[contains(text(), 'try again')]")
+            if failed_alert_popup:
+                print(f"🔍 Tìm thấy thông báo lỗi: {failed_alert_popup.text}")
+                return "RETRY LATER IN 3 DAYS"
+            print("Đã gửi yêu cầu kết nối thành công!")
             return "START PENDING"
             # try:
             #     #driver.execute_script("arguments[0].click();", driver.find_element(By.XPATH, TEXTFIELD_VERIFY_NOTE))
@@ -625,7 +658,7 @@ def send_connection(driver: webdriver.Chrome, profile_mail: str):
             actions.send_keys(Keys.SPACE).perform()
             print("🚀 Đã gửi yêu cầu kết nối thành công!")
             time.sleep(2)
-            actions.send_keys(Keys.ESCAPE).perform()
+            #actions.send_keys(Keys.ESCAPE).perform()
             return "START PENDING"                
         
                 
@@ -636,18 +669,18 @@ def send_connection(driver: webdriver.Chrome, profile_mail: str):
     
 def check_connection(driver: webdriver.Chrome, profile_mail: str = ""):
     try:
-        # 1. Cuộn trang trước khi kiểm tra để load đủ dữ liệu
-        human_scroll(driver)
+        # # 1. Cuộn trang trước khi kiểm tra để load đủ dữ liệu
+        # human_scroll(driver)
         
         # 2. Kiểm tra nhanh trạng thái "Pending" hoặc "Wait"
         # Dùng text-based XPath để chính xác hơn
-        pending_xpath = "//*[contains(text(), 'Pending') or contains(text(), 'Withdraw')]"
+        pending_xpath = "//*[contains(text(), 'Pending') or contains(text(), 'Withdraw')] | /html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/section/div/div/div[2]/div[3]/div/div/div[2]/div/div/a[contains(@aria-label, 'to withdraw')]"
         if driver.find_elements(By.XPATH, pending_xpath):
-            print("Trạng thái: Đang chờ xác nhận (Pending).")
+            print("Trạng thái: Đang chờ xác nhận (Pending). Tìm thấy Pending từ ngoài")
             return "ALREADY PENDED"
 
         # 3. Kiểm tra nút "Connected" hoặc "Message" (Nếu có Message và không có Connect -> Thường là đã bạn bè)
-        # LinkedIn đôi khi hiện nút 'Message' to đùng khi đã là bạn bè
+        # LinkedIn đôi khi hiện nút 'Message'khi đã là bạn bè
         connected_indicators = [
             "//button[contains(., 'Connected')]",
             "//button[contains(@aria-label, 'Remove Connection')]",
@@ -658,39 +691,8 @@ def check_connection(driver: webdriver.Chrome, profile_mail: str = ""):
                 print("Trạng thái: Đã kết nối.")
                 return "CONNECTED"
 
-        # 4. Kiểm tra kỹ trong menu "More"
-        try:
-            more_btn_xpath = "//button[contains(@aria-label, 'More') and contains(@class, 'artdeco-button')]"
-            more_btns = driver.find_elements(By.XPATH, more_btn_xpath)
-            
-            if more_btns:
-                # Tìm nút More hiển thị (đôi khi có nhiều nút More ẩn)
-                active_more = next((btn for btn in more_btns if btn.is_displayed()), None)
-                if active_more:
-                    human_click(driver, active_more)
-                    time.sleep(random.uniform(1.5, 2.5))
-                    
-                    # Tìm nút Remove Connection bằng text (Linh hoạt hơn XPath tuyệt đối)
-                    remove_xpath = "//div[@role='button' or @type='button'][contains(., 'Remove Connection') or contains(., 'Unfollow')]"
-                    if driver.find_elements(By.XPATH, remove_xpath):
-                        print("🔍 Xác nhận: Đã kết nối (Tìm thấy trong More).")
-                        ActionChains(driver).send_keys(Keys.ESCAPE).perform()
-                        return "CONNECTED"
-                    
-                    # Nếu thấy nút Connect trong More thì mới là chưa kết nối
-                    inner_connect = driver.find_elements(By.XPATH, "//div[contains(@aria-label, 'to connect')]")
-                    if not inner_connect:
-                         # Nếu không thấy cả Remove lẫn Connect trong More, có thể là đã CONNECTED
-                         # (LinkedIn đôi khi chỉ hiện 'Report/Block')
-                         pass
-
-                    ActionChains(driver).send_keys(Keys.ESCAPE).perform()
-                    time.sleep(1)
-        except Exception as e:
-            print(f"DEBUG: Lỗi khi quét menu More: {e}")
-
         # Nếu vượt qua hết các check trên mà không return -> Bắt đầu gửi connect
-        print("Trạng thái: Chưa gửi, bắt đầu gọi send_connection...")
+        print("Trạng thái: Chưa connect, bắt đầu gọi send_connection...")
         return send_connection(driver, profile_mail)
 
     except Exception as e:
@@ -748,7 +750,7 @@ def main_connect():
         # LOGIC SKIP: Chỉ chạy nếu chưa gửi connect và chưa là bạn bè
         # Chấp nhận các ô trống hoặc giá trị nan
         is_processed = current_dropdown != "" and current_dropdown != "nan"
-        is_connected = current_status_text in ["CONNECTED", "PENDING"]
+        is_connected = current_status_text in ["CONNECTED", "PENDING", "START PENDING", "ALREADY PENDED", "RETRY LATER IN 3 DAYS"]
 
         if is_processed or is_connected:
             print(f"⏭️ Bỏ qua dòng {index + 2}: {profile_link} (Trạng thái: {current_dropdown})")
@@ -763,7 +765,7 @@ def main_connect():
             if driver.current_url == "https://www.linkedin.com/404/":
                 print(f"⏭️ Bỏ qua dòng {index + 2}: {profile_link} (Trạng thái: 404 Not Found)")
                 continue
-            driver.save_screenshot(f"before_check_index{index}.png")
+            driver.save_screenshot(f"before_check_index{index+2}.png")
             # Kiểm tra và gửi connect
             #email_to_fill = row.get("Email để điền khi gặp câu hỏi trog lúc connect", "")
             status = check_connection(driver, profile_mail)
@@ -771,18 +773,20 @@ def main_connect():
             # Cập nhật DataFrame
             #df.at[index, COL_STATUS] = status
             df.iat[index, 3] = status
-            if status in ["SUCCESS", "START PENDING", "SUCCESS: CONNECT WITHOUT NOTE!", "PENDING"]:
+            if status in ["SUCCESS", "START PENDING", "SUCCESS: CONNECT WITHOUT NOTE!", "PENDING", "ALREADY PENDED"]:
                 #df.at[index, COL_DROPDOWN] = "Đã gửi connect"
                 df.iat[index, 2] = "Đã gửi connect"
                 send_count += 1
-                driver.save_screenshot(f"success_sent_index{index}_count{send_count}.png")
-            
+                driver.save_screenshot(f"success_sent_index{index+2}_count{send_count}.png")
+            else:
+                df.iat[index, 2] = "Không tồn tại"
+                driver.save_screenshot(f"fail_sent_index{index+2}_count{send_count}.png")
             # Nghỉ để tránh bị quét bot
             time.sleep(random.uniform(15, 25))
             
         except Exception as e:
             print(f"❌ Lỗi dòng {index + 2}: {e}")
-            driver.save_screenshot(f"fail_sent_index{index}_count{send_count}.png")
+            driver.save_screenshot(f"fail_sent_index{index+2}_count{send_count}.png")
             df.at[index, COL_STATUS] = "ERROR"
 
     # 4. CẬP NHẬT LẠI GOOGLE SHEETS DÙNG BATCH UPDATE
