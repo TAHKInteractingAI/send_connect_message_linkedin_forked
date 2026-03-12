@@ -561,6 +561,7 @@ def send_connection(driver: webdriver.Chrome, profile_mail: str):
                     if cur_element_text in ["Connect", "Connect with note"]:
                         print(f"Trạng thái: Chưa kết nối. Tìm thấy nút Connect từ trong More, chuẩn bị click.")
                         driver.execute_script("arguments[0].click();", cur_element)
+                        #actions.send_keys(Keys.SPACE).perform()
                         in_more = False                        
                 #     if cur_element_text in ["Request a recommendation"]:
                 #         print("")
@@ -599,7 +600,13 @@ def send_connection(driver: webdriver.Chrome, profile_mail: str):
         
         print("🖱️ Đã Click nút Connect. Đang đợi Modal...")
         time.sleep(5) # Đợi popup hiện ra
-
+        try:
+            failed_alert_popup = driver.find_element(By.XPATH, "/html/body/div/section/div[1]/div/div[1]/div/div/p[contains(text(), 'try again') or contains(text(), 'can resend')] | /html/body/div/section/div/div/div/div/div/p[contains(text(), 'try again') or contains(text(), 'can resend')]")
+            if failed_alert_popup:
+                print(f"🔍 Tìm thấy thông báo lỗi: {failed_alert_popup.text}")
+                return "RETRY LATER IN 3 DAYS"
+        except Exception as e:
+            print(f"Không có thông báo lỗi: {str(e)}")
         # Bước 4.1: Xử lý Modal gửi kết nối khi cần mail note xác thực (Thao tác phím để tránh lỗi XPath popup)
         try:
             # label_note = wait.until(EC.presence_of_element_located((By.XPATH, XPATH_NOTE_LABEL)))            
@@ -612,11 +619,7 @@ def send_connection(driver: webdriver.Chrome, profile_mail: str):
             press_multiple_tab(actions, 2, 0.5) #vào nút "Send a note" -> Vào nút "Send without a note"
             print(f"Nút hiện tại: {driver.switch_to.active_element.tag_name} | {driver.switch_to.active_element.text} | {driver.switch_to.active_element.aria_role}")
             actions.send_keys(Keys.SPACE).perform()
-            time.sleep(3)
-            failed_alert_popup = driver.find_element(By.XPATH, "/html/body/div/section/div[1]/div/div[1]/div/div/p[contains(text(), 'try again')]")
-            if failed_alert_popup:
-                print(f"🔍 Tìm thấy thông báo lỗi: {failed_alert_popup.text}")
-                return "RETRY LATER IN 3 DAYS"
+            time.sleep(3)            
             print("Đã gửi yêu cầu kết nối thành công!")
             return "START PENDING"
             # try:
@@ -764,6 +767,8 @@ def main_connect():
             time.sleep(random.uniform(5, 6))
             if driver.current_url == "https://www.linkedin.com/404/":
                 print(f"⏭️ Bỏ qua dòng {index + 2}: {profile_link} (Trạng thái: 404 Not Found)")
+                df.iat[index, 2] = "Không tồn tại"
+                df.iat[index, 3] = "ERROR: 404 Not Found | Không tìm thấy Link"
                 continue
             driver.save_screenshot(f"before_check_index{index+2}.png")
             # Kiểm tra và gửi connect
@@ -837,5 +842,5 @@ def main_connect():
                 body={'values': chunk}
             ).execute()
     finally:
-        driver.quit()
+        #driver.quit()
         print("Đã thoát")
