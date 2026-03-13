@@ -57,6 +57,110 @@ SPREADSHEET_ID = os.getenv('SPREADSHEET_ID')
 RANGE_NAME = "Sheet1!A:E"
 GOOGLE_CREDS = os.getenv('GOOGLE_APPLICATION_CRED')
 
+"""# **XPATH**"""
+
+# XPATH ỨNG VỚI NÚT CONNECT.
+# XPATH_MAIN_CONNECT = """
+# return document.evaluate(
+#     "/html/body/div/div/div/div/div/main/div/div/div/div/div/div/div/section/div/div/div/div/div/div/div/div/div/a | /html/body/div/div/div/div/div/div/div/main/section/div/div/div/button[contains(@aria-label, 'to connect')] | //main//button[./span[text()='Connect']] | //main//a[contains(., 'Connect')]", 
+#     document, 
+#     null, 
+#     XPathResult.FIRST_ORDERED_NODE_TYPE, 
+#     null
+# ).singleNodeValue;
+# """
+XPATH_MAIN_CONNECT = (
+            # "//main//a[contains(@class, 'profile-top-card')]//button[contains(@aria-label, 'to connect')]"
+            # "| //main//a[contains(@class, 'profile-top-card')]//a[contains(@aria-label, 'to connect')]"
+            "/html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/section/div/div/div[2]/div[3]/div/div/div[1]/div/div/a"
+            "| /html/body/div[6]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/button[contains(@aria-label, 'to connect')]"
+            "| //main//button[./span[text()='Connect']]"
+            "| //main//a[contains(., 'Connect')]"
+        )
+
+# XPATH ỨNG VỚI NÚT MESSAGE.
+STATUS_MESSAGE = "/html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/div/section/div/div/div[2]/div[3]/div/div/div[1]/a"#"/html/body/div/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[1]/button"
+# XPATH ỨNG VỚI NÚT MORE.
+XPATH_MORE_BTN_MAIN = "//main//button[contains(@aria-label, 'More')] | /html/body/div[1]/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/section/div/div/div[2]/div[3]/div/div/div[3]/button/span/span[contains(text(), 'More')]"
+
+# XPATH ỨNG VỚI NÚT UNCONNECT KHI NHẤN NÚT MORE.
+XPATH_MORE_CONNECT = "/html/body/div[2]/div/div/div[3]/div/div/a | /html/body/div[2]/div/div/div[3]/div/div/button[contains(@aria-label, 'to connect')] | /html/body/div[5]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[2]/div/div/ul/li[3]/div[contains(@aria-label, 'to connect')] | /html/body/div[6]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[2]/div/div/ul/li[3]/div[contains(@aria-label, 'to connect')] | /html/body/div[2]/div/div/div[3]/div/div/div/div[contains(@aria-label, 'to connect')]" #Đổi sang full XPATH (dễ lỗi hơn nếu có updated từ linkedin)
+
+# XPATH tìm nút Remove Connection bên trong menu More
+XPATH_MORE_REMOVE_CONNECTION = "/html/body/div[2]/div/div/div[6]/div/div/div/div/div/p | /html/body/div[6]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[2]/div/div/ul/li[6]/div"
+
+# ========================== XPATH/SCRIPT ỨNG VỚI CÁC NÚT ADD EMAIL_NOTE ==========================
+#XPATH_BUTTON_ADD_NOTE = "/html/body/div[3]/div/div/div[3]/button[1]"
+
+#XPATH_NOTE_LABEL = "/html/body/div/div[4]//div/div[1]/div/div/div[2]/label"
+XPATH_NOTE_LABEL =  """
+            function findLabelByText(text) {
+                // Hàm này sẽ quét xuyên qua cả Shadow DOM nếu cần
+                function search(root) {
+                    const labels = root.querySelectorAll('label');
+                    for (const lb of labels) {
+                        if (lb.textContent.includes(text)) return lb;
+                    }
+                    
+                    // Tìm tiếp trong các shadowRoot khác
+                    const all = root.querySelectorAll('*');
+                    for (const el of all) {
+                        if (el.shadowRoot) {
+                            const found = search(el.shadowRoot);
+                            if (found) return found;
+                        }
+                    }
+                    return null;
+                }
+                return search(document);
+            }
+            return findLabelByText('To verify this member');
+            """
+
+
+# XPATH ỨNG VỚI KHUNG NHẬP NOTE.
+# TEXTAREA_NOTE = [
+#     "/html/body/div[3]/div/div/div[3]/div[1]/textarea",         # NORMAL ACCOUNT.
+#     "/html/body/div[3]/div/div/div[2]/div[2]/div[1]/textarea"   # PREMIUM ACCOUNT.
+# ]
+# XPATH ỨNG VỚI NÚT GỬI NOTE.
+BUTTON_SEND_NOTE = [
+    "/html/body/div[3]/div/div/div[4]/button[2]",               # NORMAL ACCOUNT.
+    "/html/body/div[3]/div/div/div[3]/button[3]"                # PREMIUM ACCOUNT.
+]
+# XPATH ỨNG VỚI NÚT GỬI CONNECT MÀ KHÔNG DÙNG NOTE.
+# XPATH_SEND_WITHOUT_NOTE = ".//button[contains(@aria-label, 'without a note')]"#"//button[contains(., 'Send without a note') or contains(@aria-label, 'Send without a note') or contains(., 'Send now')]"
+# XPATH_SEND_BACKUP = ".//span[contains(normalize-space(), 'without a note')]/parent::button"
+# XPATH ỨNG VỚI NÚT GỬI CONNECT MÀ DÙNG NOTE.
+
+#TEXTFIELD_VERIFY_NOTE = "//div[3]//input[@type='email'] | //div[4]//input[@type='email']"#"/html/body/div[3]/div/div/div[2]/label/input[contains(@name, 'email') and contains(@type, 'email)] | /html/body/div[4]/div/div/div[2]/label/input[contains(@name, 'email') and contains(@type, 'email)]"
+TEXTFIELD_VERIFY_NOTE  = """
+function findElementInShadows(selector) {
+    // Hàm tìm kiếm đệ quy xuyên qua các tầng Shadow DOM
+    function search(root) {
+        // Kiểm tra trong root hiện tại (có thể là document hoặc một shadowRoot)
+        const el = root.querySelector(selector);
+        if (el) return el;
+
+        // Nếu không thấy, tìm tất cả các phần tử có shadowRoot để quét tiếp
+        const allElements = root.querySelectorAll('*');
+        for (const element of allElements) {
+            if (element.shadowRoot) {
+                const found = search(element.shadowRoot);
+                if (found) return found;
+            }
+        }
+        return null;
+    }
+    return search(document);
+}
+
+return findElementInShadows('input[name="email"][type="email"]');
+"""
+
+# XPATH để nhận diện xem Modal "Add a note" có đang hiển thị hay không
+# XPATH_MODAL_TITLE = "//h2[contains(., 'Add a note')]"
+
 """# **HÀM HỖ TRỢ**"""
 def human_scroll(driver):
     """Cuộn trang lên xuống ngẫu nhiên để mô phỏng người đọc profile"""
@@ -96,40 +200,13 @@ def get_missive_linkedin_code():
         if item.isdigit():
             return item
     return None
-    
-# def restore_cookie_from_secret():
-#     raw_cookie = os.getenv('RAW_COOKIE_BASE64')
-#     # Chỉ tạo file nếu chưa có (để ưu tiên cache của GitHub)
-#     if raw_cookie and not os.path.exists('linkedin_cookies.pkl'):
-#         with open('linkedin_cookies.pkl', 'wb') as f:
-#             f.write(base64.b64decode(raw_cookie))
-#         print("✅ Đã tạo file linkedin_cookies.pkl từ GitHub Secret!")
+
         
 def human_type(element, text):
     """Gõ phím như người thật với độ trễ ngẫu nhiên"""
     for char in text:
         element.send_keys(char)
         time.sleep(random.uniform(0.1, 0.3))
-# # def display_screenshot(driver: webdriver.Chrome, file_name: str = 'screenshot.png'):
-# #     driver.save_screenshot(file_name)
-# #     time.sleep(5)
-# #     display(Image(filename=file_name))
-# def display_full_screenshot(driver):
-#     # Wait for the body element to be present
-#     WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
-
-#     # Lấy chiều cao của trang (toàn bộ nội dung)
-#     total_height = driver.execute_script("return document.body.scrollHeight")
-
-#     # Điều chỉnh chiều cao của cửa sổ trình duyệt để khớp với chiều cao của trang
-#     driver.set_window_size(1920, total_height)  # Đặt chiều rộng và chiều cao mong muốn
-
-#     # Chụp ảnh màn hình
-#     driver.save_screenshot('screenshot.png')
-
-#     # Hiển thị ảnh chụp màn hình
-#     # time.sleep(2)  # Đợi ảnh được lưu
-#     # display(Image.open('screenshot.png'))
 
 """# **KẾT NỐI GOOGLE SHEETS**"""
 
@@ -149,12 +226,8 @@ values = [row + [''] * (max_cols - len(row)) for row in values]
 df = pd.DataFrame(values[1:], columns=values[0] if values else [])
 df = df.fillna('')
 
-"""# **HIỂN THỊ KẾT QUẢ GOOGLE SHEETS**"""
-# df.head()
 
 """# **CẤU HÌNH DRIVER**"""
-
-
 def get_driver():
     options = webdriver.ChromeOptions()
     
@@ -162,12 +235,16 @@ def get_driver():
     user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     options.add_argument(f"user-agent={user_agent}")
 
-    # 2. Các thiết lập cơ bản cho môi trường Linux/Docker (GitHub Actions)
+    # 2.1 Các thiết lập cơ bản cho môi trường Linux/Docker (GitHub Actions)
     options.add_argument('--no-sandbox')
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument('--disable-gpu')
     options.add_argument('--headless=new')
     options.add_argument("--window-size=1920,1200")
+    
+    # 2.2 Ép trình duyệt và Header luôn yêu cầu tiếng Anh (vài text button không phải tiếng anh)
+    options.add_argument('--lang=en-GB') 
+    options.add_experimental_option('prefs', {'intl.accept_languages': 'en,en_GB'})
     
     # 3. CHỐNG PHÁT HIỆN BOT (Stealth Mode)
     # Loại bỏ cờ 'nút điều khiển tự động'
@@ -175,7 +252,7 @@ def get_driver():
     options.add_experimental_option('useAutomationExtension', False)
     # Vô hiệu hóa tính năng AutomationControlled của Blink
     options.add_argument("--disable-blink-features=AutomationControlled")
-    #options.add_argument('--blink-settings=imagesEnabled=false')
+    options.add_argument('--blink-settings=imagesEnabled=false')
     
     # Thêm các cờ để trình duyệt giống người dùng thật hơn
     options.add_argument("--disable-infobars")
@@ -348,110 +425,6 @@ def login(driver: webdriver.Chrome, username: str, password: str):
     driver.save_screenshot("post-login.png")
 
 
-"""# **XPATH**"""
-
-# XPATH ỨNG VỚI NÚT CONNECT.
-# XPATH_MAIN_CONNECT = """
-# return document.evaluate(
-#     "/html/body/div/div/div/div/div/main/div/div/div/div/div/div/div/section/div/div/div/div/div/div/div/div/div/a | /html/body/div/div/div/div/div/div/div/main/section/div/div/div/button[contains(@aria-label, 'to connect')] | //main//button[./span[text()='Connect']] | //main//a[contains(., 'Connect')]", 
-#     document, 
-#     null, 
-#     XPathResult.FIRST_ORDERED_NODE_TYPE, 
-#     null
-# ).singleNodeValue;
-# """
-XPATH_MAIN_CONNECT = (
-            # "//main//a[contains(@class, 'profile-top-card')]//button[contains(@aria-label, 'to connect')]"
-            # "| //main//a[contains(@class, 'profile-top-card')]//a[contains(@aria-label, 'to connect')]"
-            "/html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/section/div/div/div[2]/div[3]/div/div/div[1]/div/div/a"
-            "| /html/body/div[6]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/button[contains(@aria-label, 'to connect')]"
-            "| //main//button[./span[text()='Connect']]"
-            "| //main//a[contains(., 'Connect')]"
-        )
-
-# XPATH ỨNG VỚI NÚT MESSAGE.
-STATUS_MESSAGE = "/html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/div/section/div/div/div[2]/div[3]/div/div/div[1]/a"#"/html/body/div/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[1]/button"
-# XPATH ỨNG VỚI NÚT MORE.
-XPATH_MORE_BTN_MAIN = "//main//button[contains(@aria-label, 'More')]"
-
-# XPATH ỨNG VỚI NÚT UNCONNECT KHI NHẤN NÚT MORE.
-XPATH_MORE_CONNECT = "/html/body/div[2]/div/div/div[3]/div/div/a | /html/body/div[2]/div/div/div[3]/div/div/button[contains(@aria-label, 'to connect')] | /html/body/div[5]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[2]/div/div/ul/li[3]/div[contains(@aria-label, 'to connect')] | /html/body/div[6]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[2]/div/div/ul/li[3]/div[contains(@aria-label, 'to connect')] | /html/body/div[2]/div/div/div[3]/div/div/div/div[contains(@aria-label, 'to connect')]" #Đổi sang full XPATH (dễ lỗi hơn nếu có updated từ linkedin)
-
-# XPATH tìm nút Remove Connection bên trong menu More
-XPATH_MORE_REMOVE_CONNECTION = "/html/body/div[2]/div/div/div[6]/div/div/div/div/div/p | /html/body/div[6]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[2]/div/div/ul/li[6]/div"
-
-# ========================== XPATH/SCRIPT ỨNG VỚI CÁC NÚT ADD EMAIL_NOTE ==========================
-#XPATH_BUTTON_ADD_NOTE = "/html/body/div[3]/div/div/div[3]/button[1]"
-
-#XPATH_NOTE_LABEL = "/html/body/div/div[4]//div/div[1]/div/div/div[2]/label"
-XPATH_NOTE_LABEL =  """
-            function findLabelByText(text) {
-                // Hàm này sẽ quét xuyên qua cả Shadow DOM nếu cần
-                function search(root) {
-                    const labels = root.querySelectorAll('label');
-                    for (const lb of labels) {
-                        if (lb.textContent.includes(text)) return lb;
-                    }
-                    
-                    // Tìm tiếp trong các shadowRoot khác
-                    const all = root.querySelectorAll('*');
-                    for (const el of all) {
-                        if (el.shadowRoot) {
-                            const found = search(el.shadowRoot);
-                            if (found) return found;
-                        }
-                    }
-                    return null;
-                }
-                return search(document);
-            }
-            return findLabelByText('To verify this member');
-            """
-
-
-# XPATH ỨNG VỚI KHUNG NHẬP NOTE.
-# TEXTAREA_NOTE = [
-#     "/html/body/div[3]/div/div/div[3]/div[1]/textarea",         # NORMAL ACCOUNT.
-#     "/html/body/div[3]/div/div/div[2]/div[2]/div[1]/textarea"   # PREMIUM ACCOUNT.
-# ]
-# XPATH ỨNG VỚI NÚT GỬI NOTE.
-BUTTON_SEND_NOTE = [
-    "/html/body/div[3]/div/div/div[4]/button[2]",               # NORMAL ACCOUNT.
-    "/html/body/div[3]/div/div/div[3]/button[3]"                # PREMIUM ACCOUNT.
-]
-# XPATH ỨNG VỚI NÚT GỬI CONNECT MÀ KHÔNG DÙNG NOTE.
-# XPATH_SEND_WITHOUT_NOTE = ".//button[contains(@aria-label, 'without a note')]"#"//button[contains(., 'Send without a note') or contains(@aria-label, 'Send without a note') or contains(., 'Send now')]"
-# XPATH_SEND_BACKUP = ".//span[contains(normalize-space(), 'without a note')]/parent::button"
-# XPATH ỨNG VỚI NÚT GỬI CONNECT MÀ DÙNG NOTE.
-
-#TEXTFIELD_VERIFY_NOTE = "//div[3]//input[@type='email'] | //div[4]//input[@type='email']"#"/html/body/div[3]/div/div/div[2]/label/input[contains(@name, 'email') and contains(@type, 'email)] | /html/body/div[4]/div/div/div[2]/label/input[contains(@name, 'email') and contains(@type, 'email)]"
-TEXTFIELD_VERIFY_NOTE  = """
-function findElementInShadows(selector) {
-    // Hàm tìm kiếm đệ quy xuyên qua các tầng Shadow DOM
-    function search(root) {
-        // Kiểm tra trong root hiện tại (có thể là document hoặc một shadowRoot)
-        const el = root.querySelector(selector);
-        if (el) return el;
-
-        // Nếu không thấy, tìm tất cả các phần tử có shadowRoot để quét tiếp
-        const allElements = root.querySelectorAll('*');
-        for (const element of allElements) {
-            if (element.shadowRoot) {
-                const found = search(element.shadowRoot);
-                if (found) return found;
-            }
-        }
-        return null;
-    }
-    return search(document);
-}
-
-return findElementInShadows('input[name="email"][type="email"]');
-"""
-
-# XPATH để nhận diện xem Modal "Add a note" có đang hiển thị hay không
-# XPATH_MODAL_TITLE = "//h2[contains(., 'Add a note')]"
-
 """# **HÀM GỬI KẾT NỐI**"""
 
 def check_status(driver: webdriver.Chrome, xpath: str, *kws):
@@ -520,11 +493,11 @@ def send_connection(driver: webdriver.Chrome, profile_mail: str):
 
         # Bước 2: Nếu không thấy, tìm trong More
         if not connect_btn:
-            #try:
-            more_btn = wait.until(EC.element_to_be_clickable((By.XPATH, XPATH_MORE_BTN_MAIN)))
-            driver.execute_script("arguments[0].click();", more_btn) #Thay đổi thành arguments[0]
-            print("Đã ấn More")
-            time.sleep(2)                
+            try:
+                more_btn = wait.until(EC.element_to_be_clickable((By.XPATH, XPATH_MORE_BTN_MAIN)))
+                driver.execute_script("arguments[0].click();", more_btn) #Thay đổi thành arguments[0]
+                print("Đã ấn More ngoài")
+                time.sleep(2)                
                 # #more_btn_xpath = "//button[contains(@aria-label, 'More') and contains(@class, 'artdeco-button')]"
                 # #remove_xpath = "//div[@role='button' or @type='button'][contains(., 'Remove Connection') or contains(., 'Unfollow')]"
                 # if driver.find_elements(By.XPATH, XPATH_MORE_REMOVE_CONNECTION):
@@ -539,22 +512,33 @@ def send_connection(driver: webdriver.Chrome, profile_mail: str):
                 # connect_btn = wait.until(EC.element_to_be_clickable((By.XPATH, XPATH_MORE_CONNECT)))
                 #print(f"✅ Tìm thấy nút Connect trong More: {connect_btn.tag_name}, {connect_btn.text}, {connect_btn.get_attribute('aria-label')}")
                              
-            #except TimeoutException:
-            print("Không tìm thấy nút Connect ở bất cứ đâu, bắt đầu dùng actionChains.")
-                #Dùng vòng lặp While, detect từng li_item.text trong more modal, nếu pending return "ALREADY PENDED", nếu REMOVE/UNFOLLOW return "CONNECTED", nếu thấy CONNECT thì bấm, còn không thấy gì thì thoát ra và return "FAILED"
+            except Exception as e: 
+                print(f"Lỗi: {e}\nKhông tìm thấy nút More với XPATH, bắt đầu dùng actionChains")
+                in_search_for_more = True
+                while in_search_for_more:
+                    actions.send_keys(Keys.TAB).perform()
+                    cur_element_more = driver.switch_to.active_element
+                    cur_element_more_text = cur_element_more.text.strip()
+                    print(f"Nút hiện tại cho check vị trí More: {cur_element_more_text}")
+                    if cur_element_more_text in ["More", "Xem thêm"]:
+                        driver.execute_script("arguments[0].click();", cur_element_more)
+                        in_search_for_more = False
+                print("Đã ấn More bằng actionChains, bắt đầu tìm Connect trong More với actionChains")
+                time.sleep(3)
+            #Dùng vòng lặp While, detect từng li_item.text trong more modal, nếu pending return "ALREADY PENDED", nếu REMOVE/UNFOLLOW return "CONNECTED", nếu thấy CONNECT thì bấm, còn không thấy gì thì thoát ra và return "FAILED"
             in_more = True
             while in_more:
                 try:
+                    time.sleep(random.uniform(0.25, 0.5)) 
                     actions.send_keys(Keys.TAB).perform()
-                    time.sleep(random.uniform(0.25, 0.3))
                     cur_element = driver.switch_to.active_element
-                    cur_element_text = cur_element.text
-                    print(f"Current element text: {cur_element_text}")
+                    cur_element_text = cur_element.text.strip()
+                    print(f"Nút hiện tại cho check trạng thái: {cur_element_text}")
                     if cur_element_text == "Pending":
                         print("Trạng thái: Đang chờ xác nhận (Pending). Tìm thấy Pending từ trong More")
                         ActionChains(driver).send_keys(Keys.ESCAPE).perform()
                         return "ALREADY PENDED"
-                    if cur_element_text in ["Remove Connection", "Unfollow"]:
+                    if cur_element_text in ["Remove connection", "Unfollow"]:
                         print(f"Trạng thái: Đã kết nối.Tìm thấy từ trong More")
                         ActionChains(driver).send_keys(Keys.ESCAPE).perform()
                         return "CONNECTED"
@@ -695,7 +679,7 @@ def check_connection(driver: webdriver.Chrome, profile_mail: str = ""):
                 return "CONNECTED"
 
         # Nếu vượt qua hết các check trên mà không return -> Bắt đầu gửi connect
-        print("Trạng thái: Chưa connect, bắt đầu gọi send_connection...")
+        print("Bắt đầu gọi send_connection - tìm pending trong More và gửi connect nếu chưa pending")
         return send_connection(driver, profile_mail)
 
     except Exception as e:
@@ -778,10 +762,13 @@ def main_connect():
             # Cập nhật DataFrame
             #df.at[index, COL_STATUS] = status
             df.iat[index, 3] = status
-            if status in ["SUCCESS", "START PENDING", "SUCCESS: CONNECT WITHOUT NOTE!", "PENDING", "ALREADY PENDED"]:
+            if status in ["START PENDING","PENDING"]:
                 #df.at[index, COL_DROPDOWN] = "Đã gửi connect"
                 df.iat[index, 2] = "Đã gửi connect"
                 send_count += 1
+                driver.save_screenshot(f"success_sent_index{index+2}_count{send_count}.png")
+            elif status in ["ALREADY PENDED", "CONNECTED"]:
+                df.iat[index, 2] = "Đã gửi connect"
                 driver.save_screenshot(f"success_sent_index{index+2}_count{send_count}.png")
             else:
                 df.iat[index, 2] = "Không tồn tại"
