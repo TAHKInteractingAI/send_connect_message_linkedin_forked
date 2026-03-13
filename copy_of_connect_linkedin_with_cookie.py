@@ -252,7 +252,7 @@ def get_driver():
     options.add_experimental_option('useAutomationExtension', False)
     # Vô hiệu hóa tính năng AutomationControlled của Blink
     options.add_argument("--disable-blink-features=AutomationControlled")
-    options.add_argument('--blink-settings=imagesEnabled=false')
+    #options.add_argument('--blink-settings=imagesEnabled=false')
     
     # Thêm các cờ để trình duyệt giống người dùng thật hơn
     options.add_argument("--disable-infobars")
@@ -529,7 +529,7 @@ def send_connection(driver: webdriver.Chrome, profile_mail: str):
             in_more = True
             while in_more:
                 try:
-                    time.sleep(random.uniform(0.25, 0.5)) 
+                    time.sleep(random.uniform(0.25, 0.5))
                     actions.send_keys(Keys.TAB).perform()
                     cur_element = driver.switch_to.active_element
                     cur_element_text = cur_element.text.strip()
