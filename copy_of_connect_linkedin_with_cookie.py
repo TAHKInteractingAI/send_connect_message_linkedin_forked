@@ -77,7 +77,8 @@ XPATH_MAIN_CONNECT = (
             "| //main//button[./span[text()='Connect']]"
             "| //main//a[contains(., 'Connect')]"
         )
-
+XPATH_FAILED_ALERT_POPUP = "/html/body/div/section/div[1]/div/div[1]/div/div/p[contains(text(), 'try again') or contains(text(), 'can resend')] | /html/body/div/section/div/div/div/div/div/p[contains(text(), 'try again') or contains(text(), 'can resend')]"
+XPATH_PENDING_BUTTON = "/html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/div/section/div/div/div[2]/div[3]/div/div/div[2]/div/div/a/span/span[text()='Pending'] | /html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/section/div/div/div[2]/div[3]/div/div/div[2]/div/div/a[contains(@aria-label, 'to withdraw')]"
 # XPATH ỨNG VỚI NÚT MESSAGE.
 STATUS_MESSAGE = "/html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/div/section/div/div/div[2]/div[3]/div/div/div[1]/a"#"/html/body/div/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[1]/button"
 # XPATH ỨNG VỚI NÚT MORE.
@@ -584,7 +585,7 @@ def send_connection(driver: webdriver.Chrome, profile_mail: str):
         print("🖱️ Đã Click nút Connect. Đang đợi Modal...")
         time.sleep(5) # Đợi popup hiện ra
         try:
-            failed_alert_popup = driver.find_element(By.XPATH, "/html/body/div/section/div[1]/div/div[1]/div/div/p[contains(text(), 'try again') or contains(text(), 'can resend')] | /html/body/div/section/div/div/div/div/div/p[contains(text(), 'try again') or contains(text(), 'can resend')]")
+            failed_alert_popup = driver.find_element(By.XPATH, XPATH_FAILED_ALERT_POPUP)
             if failed_alert_popup:
                 print(f"🔍 Tìm thấy thông báo lỗi: {failed_alert_popup.text}")
                 return "RETRY LATER IN 3 DAYS"
@@ -657,9 +658,8 @@ def check_connection(driver: webdriver.Chrome, profile_mail: str = ""):
         # human_scroll(driver)
         
         # 2. Kiểm tra nhanh trạng thái "Pending" hoặc "Wait"
-        # Dùng text-based XPath để chính xác hơn
-        pending_xpath = "/html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/div/section/div/div/div[2]/div[3]/div/div/div[2]/div/div/a/span/span[text()='Pending'] | /html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/section/div/div/div[2]/div[3]/div/div/div[2]/div/div/a[contains(@aria-label, 'to withdraw')]"
-        if driver.find_elements(By.XPATH, pending_xpath):
+        # Dùng text-based XPath để chính xác hơn 
+        if driver.find_elements(By.XPATH, XPATH_PENDING_BUTTON):
             print("Trạng thái: Đang chờ xác nhận (Pending). Tìm thấy Pending từ ngoài")
             return "ALREADY PENDED"
 
