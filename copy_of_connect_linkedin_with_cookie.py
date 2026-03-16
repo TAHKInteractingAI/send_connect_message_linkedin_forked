@@ -81,7 +81,7 @@ XPATH_MAIN_CONNECT = (
 # XPATH ỨNG VỚI NÚT MESSAGE.
 STATUS_MESSAGE = "/html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/div/section/div/div/div[2]/div[3]/div/div/div[1]/a"#"/html/body/div/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[1]/button"
 # XPATH ỨNG VỚI NÚT MORE.
-XPATH_MORE_BTN_MAIN = "//main//button[contains(@aria-label, 'More')] | /html/body/div[1]/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/section/div/div/div[2]/div[3]/div/div/div[3]/button/span/span[contains(text(), 'More')]"
+XPATH_MORE_BTN_MAIN = "//main//button[contains(@aria-label, 'More')] | //main//a[contains(@aria-label, 'More')] | //main//button//span[contains(text(), 'More')] | /html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/section/div/div/div[2]/div[3]/div/div/div[3]/button/span/span[contains(text(), 'More')] | /html/body/div[1]/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/section/div/div/div[2]/div[3]/div/div/div[3]/button/span/span[contains(text(), 'More')]"
 
 # XPATH ỨNG VỚI NÚT UNCONNECT KHI NHẤN NÚT MORE.
 XPATH_MORE_CONNECT = "/html/body/div[2]/div/div/div[3]/div/div/a | /html/body/div[2]/div/div/div[3]/div/div/button[contains(@aria-label, 'to connect')] | /html/body/div[5]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[2]/div/div/ul/li[3]/div[contains(@aria-label, 'to connect')] | /html/body/div[6]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[2]/div/div/ul/li[3]/div[contains(@aria-label, 'to connect')] | /html/body/div[2]/div/div/div[3]/div/div/div/div[contains(@aria-label, 'to connect')]" #Đổi sang full XPATH (dễ lỗi hơn nếu có updated từ linkedin)
@@ -483,14 +483,13 @@ def send_connection(driver: webdriver.Chrome, profile_mail: str):
         actions = webdriver.ActionChains(driver)
         connect_btn = None
 
-        # Bước 1: Tìm nút Connect bên ngoài        
         try:
+            # Bước 1: Tìm nút Connect bên ngoài        
             connect_btn = wait.until(EC.element_to_be_clickable((By.XPATH, XPATH_MAIN_CONNECT)))
             print(f"✅ Tìm thấy nút Connect từ ngoài: {connect_btn.tag_name}, {connect_btn.text}")
             driver.execute_script("arguments[0].click();", connect_btn) #Thay đổi thành arguments[0]
-        except TimeoutException:
+        except:
             print("🔍 Không thấy nút bên ngoài, thử tìm trong More...")
-
         # Bước 2: Nếu không thấy, tìm trong More
         if not connect_btn:
             try:
@@ -519,7 +518,7 @@ def send_connection(driver: webdriver.Chrome, profile_mail: str):
                     actions.send_keys(Keys.TAB).perform()
                     cur_element_more = driver.switch_to.active_element
                     cur_element_more_text = cur_element_more.text.strip()
-                    print(f"Nút hiện tại cho check vị trí More: {cur_element_more_text}")
+                    #print(f"Nút hiện tại cho check vị trí More: {cur_element_more_text}")
                     if cur_element_more_text in ["More", "Xem thêm"]:
                         driver.execute_script("arguments[0].click();", cur_element_more)
                         in_search_for_more = False
@@ -661,7 +660,7 @@ def check_connection(driver: webdriver.Chrome, profile_mail: str = ""):
         
         # 2. Kiểm tra nhanh trạng thái "Pending" hoặc "Wait"
         # Dùng text-based XPath để chính xác hơn
-        pending_xpath = "//*[contains(text(), 'Pending') or contains(text(), 'Withdraw')] | /html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/section/div/div/div[2]/div[3]/div/div/div[2]/div/div/a[contains(@aria-label, 'to withdraw')]"
+        pending_xpath = "/html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/div/section/div/div/div[2]/div[3]/div/div/div[2]/div/div/a/span/span[text()='Pending'] | /html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/section/div/div/div[2]/div[3]/div/div/div[2]/div/div/a[contains(@aria-label, 'to withdraw')]"
         if driver.find_elements(By.XPATH, pending_xpath):
             print("Trạng thái: Đang chờ xác nhận (Pending). Tìm thấy Pending từ ngoài")
             return "ALREADY PENDED"
