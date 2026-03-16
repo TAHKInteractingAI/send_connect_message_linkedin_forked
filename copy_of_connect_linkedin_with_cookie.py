@@ -603,7 +603,6 @@ def send_connection(driver: webdriver.Chrome, profile_mail: str):
             print(f"Nút hiện tại: {driver.switch_to.active_element.tag_name} | {driver.switch_to.active_element.text} | {driver.switch_to.active_element.aria_role}")
             actions.send_keys(Keys.SPACE).perform()
             time.sleep(3)            
-            print("Đã gửi yêu cầu kết nối thành công!")
             return "START PENDING"
             # try:
             #     #driver.execute_script("arguments[0].click();", driver.find_element(By.XPATH, TEXTFIELD_VERIFY_NOTE))
@@ -642,7 +641,6 @@ def send_connection(driver: webdriver.Chrome, profile_mail: str):
             # Bước 4.2: Xử lý Modal gửi kết nối khi không cần mail note xác thực (Thao tác phím để tránh lỗi XPath popup) 
             press_multiple_tab(actions, 3, 0.5)
             actions.send_keys(Keys.SPACE).perform()
-            print("🚀 Đã gửi yêu cầu kết nối thành công!")
             time.sleep(2)
             #actions.send_keys(Keys.ESCAPE).perform()
             return "START PENDING"                
@@ -765,6 +763,7 @@ def main_connect():
                 #df.at[index, COL_DROPDOWN] = "Đã gửi connect"
                 df.iat[index, 2] = "Đã gửi connect"
                 send_count += 1
+                print(f"Đã gửi connect. Tổng connect đã gửi: {send_count} / {MAX_LIMIT}")
                 driver.save_screenshot(f"success_sent_index{index+2}_count{send_count}.png")
             elif status in ["ALREADY PENDED", "CONNECTED"]:
                 df.iat[index, 2] = "Đã gửi connect"
