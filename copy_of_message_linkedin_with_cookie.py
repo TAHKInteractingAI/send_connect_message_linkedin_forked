@@ -191,6 +191,8 @@ def get_driver():
     options.add_argument('--disable-gpu')
     options.add_argument('--headless=new')
     options.add_argument("--window-size=1920,1200")
+    options.page_load_strategy = 'eager'
+    options.add_argument('--blink-settings=imagesEnabled=false')
     
     # 3. CHỐNG PHÁT HIỆN BOT (Stealth Mode)
     # Loại bỏ cờ 'nút điều khiển tự động'
