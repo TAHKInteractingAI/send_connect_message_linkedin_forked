@@ -136,7 +136,7 @@ BUTTON_SEND_NOTE = [
 
 #TEXTFIELD_VERIFY_NOTE = "//div[3]//input[@type='email'] | //div[4]//input[@type='email']"#"/html/body/div[3]/div/div/div[2]/label/input[contains(@name, 'email') and contains(@type, 'email)] | /html/body/div[4]/div/div/div[2]/label/input[contains(@name, 'email') and contains(@type, 'email)]"
 TEXTFIELD_VERIFY_NOTE  = """
-function findElementInShadows(selector) {
+function findElementInShadows(selector) { 
     // Hàm tìm kiếm đệ quy xuyên qua các tầng Shadow DOM
     function search(root) {
         // Kiểm tra trong root hiện tại (có thể là document hoặc một shadowRoot)
@@ -391,6 +391,7 @@ def login(driver: webdriver.Chrome, username: str, password: str):
             return
         except:
             print("INFO: Cookies không hợp lệ, thử đăng nhập lại...")
+            os.remove(COOKIES_FILE)
 
     # Nếu thông tin đăng nhập đã thay đổi hoặc không có cookies, đăng nhập thủ công
     driver.get("https://www.linkedin.com/login")
@@ -829,3 +830,6 @@ def main_connect():
     finally:
         #driver.quit()
         print("Đã thoát")
+
+if __name__ == "__main__":
+    main_connect()
