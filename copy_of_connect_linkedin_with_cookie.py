@@ -242,7 +242,7 @@ def get_driver():
     options.add_argument('--disable-gpu')
     options.add_argument('--headless=new')
     options.add_argument("--window-size=1920,1200")
-    
+    options.page_load_strategy = 'eager'
     # 2.2 Ép trình duyệt và Header luôn yêu cầu tiếng Anh (vài text button không phải tiếng anh)
     options.add_argument('--lang=en-GB') 
     options.add_experimental_option('prefs', {'intl.accept_languages': 'en,en_GB'})
@@ -253,7 +253,7 @@ def get_driver():
     options.add_experimental_option('useAutomationExtension', False)
     # Vô hiệu hóa tính năng AutomationControlled của Blink
     options.add_argument("--disable-blink-features=AutomationControlled")
-    #options.add_argument('--blink-settings=imagesEnabled=false')
+    options.add_argument('--blink-settings=imagesEnabled=false')
     
     # Thêm các cờ để trình duyệt giống người dùng thật hơn
     options.add_argument("--disable-infobars")
