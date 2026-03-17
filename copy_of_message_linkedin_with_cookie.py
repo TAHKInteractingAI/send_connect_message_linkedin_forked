@@ -191,15 +191,13 @@ def get_driver():
     options.add_argument('--disable-gpu')
     options.add_argument('--headless=new')
     options.add_argument("--window-size=1920,1200")
-    options.page_load_strategy = 'eager'
-    options.add_argument('--blink-settings=imagesEnabled=false')
     
     # 3. CHỐNG PHÁT HIỆN BOT (Stealth Mode)
     # Loại bỏ cờ 'nút điều khiển tự động'
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option('useAutomationExtension', False)
     # Vô hiệu hóa tính năng AutomationControlled của Blink
-    #options.add_argument("--disable-blink-features=AutomationControlled")
+    options.add_argument("--disable-blink-features=AutomationControlled")
     
     # Thêm các cờ để trình duyệt giống người dùng thật hơn
     options.add_argument("--disable-infobars")
@@ -282,8 +280,8 @@ def login(driver: webdriver.Chrome, username: str, password: str):
             #user_icon.screenshot("user_icon.png")
             # display_screenshot(driver, "status.png")
             return
-        except:
-            print("INFO: Cookies không hợp lệ, thử đăng nhập lại...")
+        except Exception as e:
+            print(f"INFO: Đăng nhập Cookie không thành công: {e}")
             os.remove(COOKIES_FILE)
 
     # Nếu thông tin đăng nhập đã thay đổi hoặc không có cookies, đăng nhập thủ công
