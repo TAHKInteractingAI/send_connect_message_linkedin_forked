@@ -282,13 +282,14 @@ def login(driver: webdriver.Chrome, username: str, password: str):
             return
         except:
             print("INFO: Cookies không hợp lệ, thử đăng nhập lại...")
+            os.remove(COOKIES_FILE)
 
     # Nếu thông tin đăng nhập đã thay đổi hoặc không có cookies, đăng nhập thủ công
     driver.get("https://www.linkedin.com/login")
     driver.save_screenshot("before_input.png")
     username_field = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, XPATH_USERNAME)))
     password_field = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, XPATH_PASSWORD)))
-    
+    login_button = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, XPATH_LOGIN_BUTTON)))
     
     human_type(username_field, username)
     #username_field.send_keys(username)
@@ -296,16 +297,8 @@ def login(driver: webdriver.Chrome, username: str, password: str):
     human_type(password_field, password)
     #password_field.send_keys(password)
     time.sleep(2)
-    for i in range(5):
-        try:
-            WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH, XPATH_LOGIN_BUTTON))).click()
-            print(f"Click login thành công ở lần {i+1}")
-            break
-        except Exception as e:
-            print(f"STALE ERROR {i+1}: {e}")
-            time.sleep(1)
-    
-    
+    login_button.click()
+
     time.sleep(10)
     driver.save_screenshot("before_verification.png")
     handle_code_verification(driver)
@@ -364,7 +357,8 @@ def login_with_cookie(driver):
 """# **XPATH**"""
 
 # XPATH ỨNG VỚI NÚT MESSAGE.
-BUTTON_MESSAGE = "/html/body/div[6]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[1]/button[contains(@aria-label, 'Message')] | /html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/section/div/div/div[2]/div[3]/div/div/div[1]/a | /html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/section/div/div/div[2]/div[3]/div/div/div[2]/a"  #Đổi sang full XPATH (dễ lỗi hơn nếu có updated từ linkedin)
+
+BUTTON_MESSAGE = "/html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/div/section/div/div/div[2]/div[3]/div/div/div[1]/a/span/span[contains(text(), 'Message')] | /html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/div/section/div/div/div[2]/div[3]/div/div/div[2]/a | /html/body/div[6]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[1]/button[contains(@aria-label, 'Message')] | /html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/section/div/div/div[2]/div[3]/div/div/div[1]/a | /html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/section/div/div/div[2]/div[3]/div/div/div[2]/a"  #Đổi sang full XPATH (dễ lỗi hơn nếu có updated từ linkedin)
 
 # XPATH ỨNG VỚI KHUNG TIN NHẮN. (CLASS NAME)
 FIELD_MESSAGE = "msg-form__contenteditable"
@@ -504,52 +498,53 @@ def send_message(driver: webdriver.Chrome, target_profile, datum):
 
 
 
-def solve_subject_field_with_gemini(image_path: str, max_entries: int = 3) -> str:
-    client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
+# def solve_subject_field_with_gemini(image_path: str, max_entries: int = 3) -> str:
+#     client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
 
-    # Read & encode image
-    with open(image_path, "rb") as f:
-        image_base64 = base64.b64encode(f.read()).decode("utf-8")
+#     # Read & encode image
+#     with open(image_path, "rb") as f:
+#         image_base64 = base64.b64encode(f.read()).decode("utf-8")
 
-    for attempt in range(1, max_entries + 1):
-        try:
-            response = client.models.generate_content(
-                model="gemini-3-flash-preview",
-                contents=[
-                    types.Content(
-                        role="user",                    
-                        parts=[
-                            types.Part(
-                                text=(
-                                    "This is a linkedin image that contains the message box. "
-                                    "If there's an input field to type in subject, response 'YES', else response 'NO'."
-                                    "Only give me one-word response, nothing else."
-                                )
-                            ),
-                            types.Part(
-                                inline_data=types.Blob(
-                                    mime_type="image/png",
-                                    data=image_base64,
-                                )
-                            ),
-                        ],
-                    )
-                ],
-            )
+#     for attempt in range(1, max_entries + 1):
+#         try:
+#             response = client.models.generate_content(
+#                 model="gemini-3-flash-preview",
+#                 contents=[
+#                     types.Content(
+#                         role="user",                    
+#                         parts=[
+#                             types.Part(
+#                                 text=(
+#                                     "This is a linkedin image that contains the message box. "
+#                                     "If there's an input field to type in subject, response 'YES', else response 'NO'."
+#                                     "Only give me one-word response, nothing else."
+#                                 )
+#                             ),
+#                             types.Part(
+#                                 inline_data=types.Blob(
+#                                     mime_type="image/png",
+#                                     data=image_base64,
+#                                 )
+#                             ),
+#                         ],
+#                     )
+#                 ],
+#             )
 
-            # Safe extraction
-            return response.text.strip()
+#             # Safe extraction
+#             return response.text.strip()
 
-        except ServerError as e:
-            if attempt < max_entries:
-                time.sleep(3)
-            else:
-                raise RuntimeError("❌ Max retries reached. Gemini API unavailable.") from e
+#         except ServerError as e:
+#             if attempt < max_entries:
+#                 time.sleep(3)
+#             else:
+#                 raise RuntimeError("Max retries reached. Gemini API unavailable.") from e
 
-    return None
+#     return None
 
 def send_message_optimized(driver, row):
     try:
+        actions = ActionChains(driver)
         name = row['Name']
         message_template = row['Message'].replace("{{Name}}", name)
         attachment = str(row.get('Attachment', "")).strip()
@@ -572,35 +567,31 @@ def send_message_optimized(driver, row):
             time.sleep(3)
             driver.save_screenshot(f"message_box_found.png")
         except:
-            print("Không tìm thấy nút msg")
-            return "ERROR: MESSAGE BUTTON NOT FOUND"
-        # premium_buy_button = "//a[contains(@class, 'artdeco-button') and contains(., 'Premium')]"
-        # try:
-        #     WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, premium_buy_button)))
-        #     print("Đã tìm thấy nút Premium")
-        #     return "PREMIUM_FOUND"
-        # except TimeoutException:
-        #     print("Nút Premium không khả dụng")
-        # NHẬP NỘI DUNG
-        # msg_box = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, FIELD_MESSAGE_CLASS)))
-        #print("Message box found")
-        #msg_box.click()
-        #print("Ready to input")
-        #human_type(msg_box, full_message)
-        # msg_box.send_keys(full_message)
-        #driver.switch_to.active_element.send_keys(full_message)
-        current_element = driver.switch_to.active_element.get_attribute("class")
-        print(f"Current active element: {current_element}")
+            print("Không tìm thấy nút msg với XPATH, bắt đầu actionChains")
+            in_search_for_mess = True
+            while in_search_for_mess:
+                actions.send_keys(Keys.TAB).perform()
+                time.sleep(0.5)
+                mess_current_element = driver.switch_to.active_element
+                mess_current_element_text = mess_current_element.text.strip()
+                if mess_current_element_text in ["Message"]:
+                    driver.execute_script("arguments[0].click();", mess_current_element)
+                    in_search_for_mess = False
+            print("Đã tìm thấy và click vào nút Message bằng ActionChains")
+            #return "ERROR: MESSAGE BUTTON NOT FOUND"
         
-        actions = ActionChains(driver)
-        gemini_result = solve_subject_field_with_gemini("message_box_found.png")
-        print(gemini_result)
-        if gemini_result not in ['YES', 'NO']:
-            print("WARNING: Gemini response không rõ ràng, mặc định sẽ nhấn TAB để thử kích hoạt trường nhập tin nhắn.")
-            return "UNKNOWN"
-        if gemini_result == "YES":
-            actions.send_keys(Keys.TAB).perform()
-            time.sleep(0.5)
+        # current_element = driver.switch_to.active_element.get_attribute("class")
+        # print(f"Current active element: {current_element}")
+        
+        # gemini_result = solve_subject_field_with_gemini("message_box_found.png")
+        # print(gemini_result)
+        # if gemini_result not in ['YES', 'NO']:
+        #     print("WARNING: Gemini response không rõ ràng, mặc định sẽ nhấn TAB để thử kích hoạt trường nhập tin nhắn.")
+        #     return "UNKNOWN"
+        # if gemini_result == "YES":
+        #     actions.send_keys(Keys.TAB).perform()
+        #     time.sleep(0.5)
+        
         actions.send_keys(full_message).perform()
         actions.send_keys(Keys.SPACE).perform()
         print("Message input complete")
@@ -723,6 +714,7 @@ def main_mess():
     sent_links = set()  # Tập hợp để theo dõi các link đã gửi trong phiên này
     
     for index, row in df.iterrows():
+        print(f"=======================Starting================")
         # 1. Kiểm tra giới hạn hàng ngày
         if send_count >= MAX_MESSAGES_PER_DAY:
             print(f"INFO: Đã đạt giới hạn {MAX_MESSAGES_PER_DAY} người/ngày")
@@ -813,3 +805,5 @@ def main_mess():
     driver.quit()
     print("ĐÃ THOÁT")
 
+if __name__ == "__main__":
+    main_mess()
