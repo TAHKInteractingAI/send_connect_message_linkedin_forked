@@ -283,7 +283,11 @@ def login(driver: webdriver.Chrome, username: str, password: str):
         except Exception as e:
             print(f"INFO: Đăng nhập Cookie không thành công: {e}")
             os.remove(COOKIES_FILE)
-
+    else:
+        print("INFO: Không có file cookies")
+        
+    print("INFO: Bắt đầu login thủ công")
+    
     # Nếu thông tin đăng nhập đã thay đổi hoặc không có cookies, đăng nhập thủ công
     driver.get("https://www.linkedin.com/login")
     driver.save_screenshot("before_input.png")
