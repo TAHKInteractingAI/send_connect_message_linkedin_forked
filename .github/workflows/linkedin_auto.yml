@@ -69,24 +69,23 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Checking for old caches..."
-          # Lấy danh sách các cache key theo tiền tố, sắp xếp theo thời gian tạo (mới nhất lên đầu)
-          cacheKeys=$(gh cache list --key "${{ runner.os }}-linkedin-session-" --sort created_at --order desc --json key -q '.[].key')
+          echo "Dọn dẹp các cache cũ có tiền tố ${{ runner.os }}-linkedin-session-..."
           
-          # Đếm số lượng cache
-          count=$(echo "$cacheKeys" | wc -w)
-          echo "Found $count caches."
-
-          if [ "$count" -gt 1 ]; then
-            # Giữ lại key đầu tiên (mới nhất), xóa tất cả các key còn lại
-            oldKeys=$(echo "$cacheKeys" | tail -n +2)
-            for key in $oldKeys; do
-              echo "Deleting old cache: $key"
+          # Lấy danh sách tất cả cache keys, trừ cái vừa tạo (run_id hiện tại)
+          # Sắp xếp theo thời gian tạo, mới nhất lên đầu
+          all_caches=$(gh cache list --limit 100 --json key,createdAt --sort created_at --order desc)
+          
+          # Lọc các key có tiền tố session nhưng KHÔNG phải của run_id hiện tại
+          current_key="${{ runner.os }}-linkedin-session-${{ github.run_id }}"
+          
+          echo "$all_caches" | jq -r '.[] | .key' | grep "${{ runner.os }}-linkedin-session-" | while read -r key; do
+            if [ "$key" != "$current_key" ]; then
+              echo "Đang xóa cache cũ: $key"
               gh cache delete "$key" || true
-            done
-          else
-            echo "No old caches to cleanup."
-          fi
+            else
+              echo "Giữ lại cache hiện tại: $key"
+            fi
+          done
 
       # 4. Lưu lại cookie mới nhất cho lần sau
       - name: Save LinkedIn Cookie
