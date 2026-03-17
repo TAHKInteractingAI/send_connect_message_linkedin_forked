@@ -199,7 +199,7 @@ def get_driver():
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option('useAutomationExtension', False)
     # Vô hiệu hóa tính năng AutomationControlled của Blink
-    options.add_argument("--disable-blink-features=AutomationControlled")
+    #options.add_argument("--disable-blink-features=AutomationControlled")
     
     # Thêm các cờ để trình duyệt giống người dùng thật hơn
     options.add_argument("--disable-infobars")
