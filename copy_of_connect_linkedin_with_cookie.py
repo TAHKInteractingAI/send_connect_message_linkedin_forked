@@ -71,8 +71,8 @@ GOOGLE_CREDS = os.getenv('GOOGLE_APPLICATION_CRED')
 # """
 XPATH_MAIN_CONNECT = (
             # "//main//a[contains(@class, 'profile-top-card')]//button[contains(@aria-label, 'to connect')]"
-            # "| //main//a[contains(@class, 'profile-top-card')]//a[contains(@aria-label, 'to connect')]"            
-            "/html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/section/div/div/div[2]/div[3]/div/div/div[1]/div/div/a[contains(@aria-label, 'Connect')]"
+            # "| //main//a[contains(@class, 'profile-top-card')]//a[contains(@aria-label, 'to connect')]"
+            "/html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/section/div/div/div[2]/div[3]/div/div/div[1]/div/div/a"
             "| /html/body/div[6]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/button[contains(@aria-label, 'to connect')]"
             "| //main//button[./span[text()='Connect']]"
             "| //main//a[contains(., 'Connect')]"
@@ -85,7 +85,7 @@ STATUS_MESSAGE = "/html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/di
 XPATH_MORE_BTN_MAIN = "//main//button[contains(@aria-label, 'More')] | //main//a[contains(@aria-label, 'More')] | //main//button//span[contains(text(), 'More')] | /html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/section/div/div/div[2]/div[3]/div/div/div[3]/button/span/span[contains(text(), 'More')] | /html/body/div[1]/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/section/div/div/div[2]/div[3]/div/div/div[3]/button/span/span[contains(text(), 'More')]"
 
 # XPATH ỨNG VỚI NÚT UNCONNECT KHI NHẤN NÚT MORE.
-XPATH_MORE_CONNECT = "/html/body/div[2]/div/div/div[3]/div/div/a/div/div/p[contains(text(), 'Connect')] | /html/body/div[2]/div/div/div[3]/div/div/a | /html/body/div[2]/div/div/div[3]/div/div/button[contains(@aria-label, 'to connect')] | /html/body/div[5]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[2]/div/div/ul/li[3]/div[contains(@aria-label, 'to connect')] | /html/body/div[6]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[2]/div/div/ul/li[3]/div[contains(@aria-label, 'to connect')] | /html/body/div[2]/div/div/div[3]/div/div/div/div[contains(@aria-label, 'to connect')]" #Đổi sang full XPATH (dễ lỗi hơn nếu có updated từ linkedin)
+XPATH_MORE_CONNECT = "/html/body/div[2]/div/div/div[3]/div/div/a | /html/body/div[2]/div/div/div[3]/div/div/button[contains(@aria-label, 'to connect')] | /html/body/div[5]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[2]/div/div/ul/li[3]/div[contains(@aria-label, 'to connect')] | /html/body/div[6]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[2]/div/div/ul/li[3]/div[contains(@aria-label, 'to connect')] | /html/body/div[2]/div/div/div[3]/div/div/div/div[contains(@aria-label, 'to connect')]" #Đổi sang full XPATH (dễ lỗi hơn nếu có updated từ linkedin)
 
 # XPATH tìm nút Remove Connection bên trong menu More
 XPATH_MORE_REMOVE_CONNECTION = "/html/body/div[2]/div/div/div[6]/div/div/div/div/div/p | /html/body/div[6]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[2]/div/div/ul/li[6]/div"
@@ -253,7 +253,6 @@ def get_driver():
     options.add_experimental_option('useAutomationExtension', False)
     # Vô hiệu hóa tính năng AutomationControlled của Blink
     options.add_argument("--disable-blink-features=AutomationControlled")
-    #options.add_argument('--blink-settings=imagesEnabled=false')
     
     # Thêm các cờ để trình duyệt giống người dùng thật hơn
     options.add_argument("--disable-infobars")
@@ -383,7 +382,7 @@ def login(driver: webdriver.Chrome, username: str, password: str):
         try:
             user_icon = WebDriverWait(driver, 10).until(
                 EC.presence_of_element_located((By.CLASS_NAME, 'global-nav__me-photo')))
-            print("INFO: Logged in using cookies!")
+            print("INFO: Đã đăng nhập với cookies!")
             driver.save_screenshot("cookie-login.png")
             # save user_icon
             #user_icon.screenshot("user_icon.png")
@@ -396,7 +395,6 @@ def login(driver: webdriver.Chrome, username: str, password: str):
         print("INFO: Không có file cookies")
         
     print("INFO: Bắt đầu login thủ công")
-
     # Nếu thông tin đăng nhập đã thay đổi hoặc không có cookies, đăng nhập thủ công
     driver.get("https://www.linkedin.com/login")
     driver.save_screenshot("before_input.png")
@@ -787,15 +785,20 @@ def main_connect():
     # 4. CẬP NHẬT LẠI GOOGLE SHEETS DÙNG BATCH UPDATE
     print("📤 Đang chuẩn bị dữ liệu Batch Update...")
     
+    # Đảm bảo không có giá trị NaN và chuyển DataFrame thành list (chỉ chứa data, không chứa header)
     df_to_upload = df.fillna("") 
     final_values = df_to_upload.values.tolist()
     
-    num_rows = len(final_values)
+    # Lấy số lượng cột thực tế từ DataFrame
     num_cols = len(df_to_upload.columns)
     last_col_letter = chr(ord('A') + num_cols - 1)
     
-    # Định nghĩa vùng dữ liệu (Data Range)
-    update_range = f"Sheet1!A2:{last_col_letter}{num_rows + 1}"
+    # Lấy số lượng dòng thực tế của dữ liệu
+    num_rows_data = len(final_values)
+    
+    # ĐỊNH NGHĨA VÙNG DỮ LIỆU: Bắt đầu từ A2 đến dòng cuối cùng của dữ liệu
+    # Ví dụ: Nếu có 2 dòng dữ liệu, vùng ghi sẽ là A2:E3
+    update_range = f"Sheet1!A2:{last_col_letter}{num_rows_data + 1}"
 
     # Cấu trúc body cho batchUpdate
     batch_update_values_request_body = {
@@ -809,20 +812,20 @@ def main_connect():
     }
 
     try:
-        # Sử dụng batchUpdate thay vì update thông thường
+        # Sử dụng batchUpdate bắt đầu từ dòng 2
         service.spreadsheets().values().batchUpdate(
             spreadsheetId=SPREADSHEET_ID,
             body=batch_update_values_request_body
         ).execute()
-        print(f"✅ Batch Update thành công vùng {update_range}!")
+        print(f"✅ Batch Update thành công vùng {update_range}! (Dòng 1 tiêu đề đã được bảo vệ)")
     except Exception as e:
         print(f"❌ Lỗi Batch Update: {e}")
-        # Backup plan: Nếu batch vẫn lỗi SSL, chia nhỏ để gửi (Chunking)
+        # Backup plan: Chia nhỏ (Chunking) nhưng vẫn giữ logic bắt đầu từ dòng 2
         print("🔄 Đang thử gửi lại theo phương thức Chia nhỏ (Chunking)...")
         chunk_size = 5
         for i in range(0, len(final_values), chunk_size):
             chunk = final_values[i : i + chunk_size]
-            r_start = i + 2
+            r_start = i + 2 # Luôn bắt đầu từ dòng 2
             r_end = r_start + len(chunk) - 1
             c_range = f"Sheet1!A{r_start}:{last_col_letter}{r_end}"
             service.spreadsheets().values().update(
@@ -832,8 +835,7 @@ def main_connect():
                 body={'values': chunk}
             ).execute()
     finally:
-        #driver.quit()
-        print("Đã thoát")
+        print("Đã hoàn thành cập nhật")
 
 if __name__ == "__main__":
     main_connect()
