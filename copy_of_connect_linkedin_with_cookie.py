@@ -72,7 +72,8 @@ GOOGLE_CREDS = os.getenv('GOOGLE_APPLICATION_CRED')
 XPATH_MAIN_CONNECT = (
             # "//main//a[contains(@class, 'profile-top-card')]//button[contains(@aria-label, 'to connect')]"
             # "| //main//a[contains(@class, 'profile-top-card')]//a[contains(@aria-label, 'to connect')]"
-            "/html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/section/div/div/div[2]/div[3]/div/div/div[1]/div/div/a"
+            "/html/body/div[2]/div/div/div[3]/div/div/a/div/div/p[contains(text(), 'Connect')]"
+            "| /html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/section/div/div/div[2]/div[3]/div/div/div[1]/div/div/a[contains(@aria-label, 'Connect')]"
             "| /html/body/div[6]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/button[contains(@aria-label, 'to connect')]"
             "| //main//button[./span[text()='Connect']]"
             "| //main//a[contains(., 'Connect')]"
