@@ -39,7 +39,43 @@ SHEET_NAME = 'Sheet1'
 RANGE_NAME = 'A:E'
 GOOGLE_CREDS = os.getenv('GOOGLE_APPLICATION_CRED')
 
+"""# **XPATH**"""
+
+# XPATH ỨNG VỚI NÚT MESSAGE.
+BUTTON_MESSAGE = "/html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/div/section/div/div/div[2]/div[3]/div/div/div[1]/a/span/span[contains(text(), 'Message')] | /html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/div/section/div/div/div[2]/div[3]/div/div/div[2]/a | /html/body/div[6]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[1]/button[contains(@aria-label, 'Message')] | /html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/section/div/div/div[2]/div[3]/div/div/div[1]/a | /html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/section/div/div/div[2]/div[3]/div/div/div[2]/a"  #Đổi sang full XPATH (dễ lỗi hơn nếu có updated từ linkedin)
+# XPATH ỨNG VỚI KHUNG TIN NHẮN. (CLASS NAME)
+CLASS_FIELD_MESSAGE = "msg-form__contenteditable"
+# CLASS ỨNG VỚI KHUNG ĐÍNH KÈM TỆP. (CLASS NAME)
+CLASS_FIELD_ATTACHMENT = "msg-form__attachment-upload-input"
+#XPATH CÁC FILE ATTACH
+XPATH_FILE_ATTACH_BTN = "//button[contains(@title, 'Attach a file to your conversation with') or contains(@aria-label, 'Attach a file to your conversation with')]"
+XPATH_FILE_ATTACH = f"//input[@type='file' and contains(@class, {CLASS_FIELD_ATTACHMENT})]"
+# XPATH ỨNG VỚI NÚT GỬI TIN NHẮN. (CLASS NAME)
+XPATH_BUTTON_SUBMIT_MESSAGE = "msg-form__send-button"
+# XPATH ỨNG VỚI NÚT ĐÓNG HỘP THOẠI NHẮN TIN.
+XPATH_BUTTON_CLOSE_MESSAGE = "/html/body/div[6]/div[4]/aside[1]/div[2]/div[1]/header/div[4]/button[3]"
+# XPATH cập nhật (LinkedIn thường xuyên đổi ID nên dùng Class hoặc Text ổn định hơn)
+FIELD_MESSAGE_CLASS = "msg-form__contenteditable"
+BUTTON_SEND_CLASS = "msg-form__send-button"
+XPATH_ACCEPT_BUTTON = "//button[span[text()='Accept']]"
+# Login fields/buttons
+XPATH_USERNAME = '//*[@id="username"]'
+XPATH_PASSWORD = '//*[@id="password"]'
+XPATH_LOGIN_BUTTON = '//button[contains(@class, "btn__primary--large") and @aria-label="Sign in"]'
+# Message/send related
+SEND_BUTTON_XPATH = "//button[contains(@class, 'msg-form__send-button')] | //button[text()='Send']"
+
+
 """# **HÀM HỖ TRỢ**"""
+def press_multiple_tab(actions,number_of_presses, wait_time):
+    for i in range(number_of_presses):
+        actions.send_keys(Keys.TAB).perform()
+        time.sleep(wait_time)
+        
+def shift_tab(actions, wait_time):
+    actions.key_down(Keys.LEFT_SHIFT).send_keys(Keys.TAB).key_up(Keys.LEFT_SHIFT).perform()
+    time.sleep(wait_time)
+    
 def get_missive_linkedin_code():
     response = requests.get("https://public.missiveapp.com/v1/conversations", headers=HEADERS, params=PARAMS)
     if response.status_code != 200:
@@ -67,18 +103,73 @@ def human_type(element, text):
         time.sleep(random.uniform(0.1, 0.3))
 def random_delay(min_s=2, max_s=5):
     time.sleep(random.uniform(min_s, max_s))
+# def get_data_with_links_return_with_attachment_url(sheet):
+#     # 1. Lấy toàn bộ giá trị của bảng tính (để biết chính xác số dòng hiện có)
+#     all_values = sheet.get_all_values()
+#     if len(all_values) < 2:
+#         return pd.DataFrame()
+
+#     headers = all_values[0]  # Dòng 2 (index 1) là header
+#     data_rows = all_values[1:] # Dữ liệu thực tế từ dòng 2
+#     num_rows = len(data_rows)
+
+#     # 2. Lấy metadata của cột E (Attachment) - Giả sử là cột số 5
+#     # Chỉ lấy đúng phạm vi tương ứng với số dòng dữ liệu đang có
+#     spreadsheet = sheet.spreadsheet
+#     sheet_name = sheet.title
+#     range_metadata = f"{sheet_name}!E2:E{1 + num_rows}"
+    
+#     res_metadata = spreadsheet.fetch_sheet_metadata({
+#         'includeGridData': True,
+#         'ranges': [range_metadata]
+#     })
+    
+#     links_per_row = []
+#     # Truy cập vào cấu trúc dữ liệu JSON của Google
+#     sheets_data = res_metadata.get('sheets', [])[0].get('data', [])[0]
+#     rowData = sheets_data.get('rowData', [])
+    
+#     for row in rowData:
+#         cell_links = []
+#         values = row.get('values', [])
+#         if values:
+#             cell = values[0]
+#             # Ưu tiên 1: Link bao trùm toàn bộ ô
+#             if 'hyperlink' in cell:
+#                 cell_links.append(cell['hyperlink'])
+#             # Ưu tiên 2: Nhiều link trong các đoạn văn bản (Rich Text)
+#             elif 'textFormatRuns' in cell:
+#                 for run in cell['textFormatRuns']:
+#                     url = run.get('format', {}).get('link', {}).get('uri')
+#                     if url:
+#                         cell_links.append(url)
+        
+#         # Gộp các link, loại bỏ trùng lặp bằng set
+#         unique_links = list(dict.fromkeys(cell_links))
+#         links_per_row.append(", ".join(unique_links))
+
+#     # 3. Đảm bảo links_per_row có độ dài bằng với data_rows
+#     # Nếu metadata trả về thiếu, bù cho đủ bằng chuỗi rỗng
+#     while len(links_per_row) < num_rows:
+#         links_per_row.append("")
+
+#     # 4. Tạo DataFrame
+#     df = pd.DataFrame(data_rows, columns=headers)
+    
+#     # Cập nhật cột Attachment (cần chắc chắn tên cột đúng 100% với file Sheets)
+#     if 'Attachment' in df.columns:
+#         df['Attachment'] = links_per_row[:num_rows]
+    
+#     return df
 def get_data_with_links(sheet):
-    # 1. Lấy toàn bộ giá trị của bảng tính (để biết chính xác số dòng hiện có)
     all_values = sheet.get_all_values()
     if len(all_values) < 2:
         return pd.DataFrame()
 
-    headers = all_values[0]  # Dòng 2 (index 1) là header
-    data_rows = all_values[1:] # Dữ liệu thực tế từ dòng 2
+    headers = all_values[0]
+    data_rows = all_values[1:]
     num_rows = len(data_rows)
 
-    # 2. Lấy metadata của cột E (Attachment) - Giả sử là cột số 5
-    # Chỉ lấy đúng phạm vi tương ứng với số dòng dữ liệu đang có
     spreadsheet = sheet.spreadsheet
     sheet_name = sheet.title
     range_metadata = f"{sheet_name}!E2:E{1 + num_rows}"
@@ -88,43 +179,49 @@ def get_data_with_links(sheet):
         'ranges': [range_metadata]
     })
     
-    links_per_row = []
-    # Truy cập vào cấu trúc dữ liệu JSON của Google
+    file_names_per_row = []
     sheets_data = res_metadata.get('sheets', [])[0].get('data', [])[0]
     rowData = sheets_data.get('rowData', [])
     
     for row in rowData:
-        cell_links = []
+        names = []
         values = row.get('values', [])
         if values:
             cell = values[0]
-            # Ưu tiên 1: Link bao trùm toàn bộ ô
+            full_text = cell.get('formattedValue', '')
+            
+            # Trường hợp 1: Link bao phủ toàn bộ ô
             if 'hyperlink' in cell:
-                cell_links.append(cell['hyperlink'])
-            # Ưu tiên 2: Nhiều link trong các đoạn văn bản (Rich Text)
+                names.append(full_text)
+            
+            # Trường hợp 2: Rich Text (Nhiều file/link trong 1 ô)
             elif 'textFormatRuns' in cell:
-                for run in cell['textFormatRuns']:
+                runs = cell['textFormatRuns']
+                for i in range(len(runs)):
+                    run = runs[i]
+                    # Kiểm tra xem đoạn text này có chứa link không
                     url = run.get('format', {}).get('link', {}).get('uri')
                     if url:
-                        cell_links.append(url)
+                        start = run.get('startIndex', 0)
+                        # Kết thúc là startIndex của run kế tiếp hoặc cuối chuỗi
+                        end = runs[i+1].get('startIndex') if i + 1 < len(runs) else len(full_text)
+                        
+                        file_name = full_text[start:end].strip(", \n")
+                        if file_name:
+                            names.append(file_name)
         
-        # Gộp các link, loại bỏ trùng lặp bằng set
-        unique_links = list(dict.fromkeys(cell_links))
-        links_per_row.append(", ".join(unique_links))
+        # Gộp các tên file, phân cách bằng dấu phẩy
+        file_names_per_row.append(", ".join(dict.fromkeys(names)))
 
-    # 3. Đảm bảo links_per_row có độ dài bằng với data_rows
-    # Nếu metadata trả về thiếu, bù cho đủ bằng chuỗi rỗng
-    while len(links_per_row) < num_rows:
-        links_per_row.append("")
+    while len(file_names_per_row) < num_rows:
+        file_names_per_row.append("")
 
-    # 4. Tạo DataFrame
     df = pd.DataFrame(data_rows, columns=headers)
-    
-    # Cập nhật cột Attachment (cần chắc chắn tên cột đúng 100% với file Sheets)
     if 'Attachment' in df.columns:
-        df['Attachment'] = links_per_row[:num_rows]
+        df['Attachment'] = file_names_per_row[:num_rows]
     
     return df
+
 def save_cookies(driver):
     """Lưu cookies vào file"""
     with open(COOKIES_FILE, "wb") as cookies_file:
@@ -222,9 +319,9 @@ def get_driver():
                 
 def handle_cookie_acceptance(driver: webdriver.Chrome):
     try:
-        driver.find_element(By.XPATH, "//button[span[text()='Accept']]").click()
+        driver.find_element(By.XPATH, XPATH_ACCEPT_BUTTON).click()
         print("INFO: COOKIES IS ACCEPTED!")
-    except:
+    except Exception:
         print("INFO: COOKIES IS NOT REQUIRED!")
 
 def handle_code_verification(driver: webdriver.Chrome):
@@ -252,9 +349,7 @@ def handle_code_verification(driver: webdriver.Chrome):
 
 def login(driver: webdriver.Chrome, username: str, password: str):
     """Đăng nhập vào LinkedIn với username và password mới nếu có sự thay đổi"""
-    XPATH_USERNAME = '//*[@id="username"]'
-    XPATH_PASSWORD = '//*[@id="password"]'
-    XPATH_LOGIN_BUTTON = '//button[contains(@class, "btn__primary--large") and @aria-label="Sign in"]'
+    # Use module-level XPATH constants defined at top
 
     driver.get("https://www.linkedin.com/login")
     time.sleep(2)  # Ensure the page is fully loaded
@@ -287,7 +382,6 @@ def login(driver: webdriver.Chrome, username: str, password: str):
         print("INFO: Không có file cookies")
         
     print("INFO: Bắt đầu login thủ công")
-    
     # Nếu thông tin đăng nhập đã thay đổi hoặc không có cookies, đăng nhập thủ công
     driver.get("https://www.linkedin.com/login")
     driver.save_screenshot("before_input.png")
@@ -319,186 +413,169 @@ def login(driver: webdriver.Chrome, username: str, password: str):
     # display_screenshot(driver, "status.png")
     # display_full_screenshot(driver)
 
-def login_with_cookie(driver):
-    """Xử lý đăng nhập bằng Cookie li_at từ .env"""
-    print("INFO: Đang thử đăng nhập bằng Cookie...")
-    # Bước 1: Vào domain LinkedIn trước để trình duyệt chấp nhận cookie
-    driver.get("https://www.linkedin.com/login")
-    time.sleep(3)
+# def login_with_cookie(driver):
+#     """Xử lý đăng nhập bằng Cookie li_at từ .env"""
+#     print("INFO: Đang thử đăng nhập bằng Cookie...")
+#     # Bước 1: Vào domain LinkedIn trước để trình duyệt chấp nhận cookie
+#     driver.get("https://www.linkedin.com/login")
+#     time.sleep(3)
 
-    li_at_cookie = os.getenv("LINKEDIN_COOKIE")
+#     li_at_cookie = os.getenv("LINKEDIN_COOKIE")
     
-    if li_at_cookie:
-        try:
-            driver.delete_all_cookies()
-            driver.add_cookie({
-                "name": "li_at",
-                "value": li_at_cookie,
-                "domain": ".linkedin.com",
-                "path": "/",
-                "secure": True
-            })
+#     if li_at_cookie:
+#         try:
+#             driver.delete_all_cookies()
+#             driver.add_cookie({
+#                 "name": "li_at",
+#                 "value": li_at_cookie,
+#                 "domain": ".linkedin.com",
+#                 "path": "/",
+#                 "secure": True
+#             })
             
-            # Bước 2: Refresh vào trang Feed
-            driver.get("https://www.linkedin.com/feed/")
-            time.sleep(5)
+#             # Bước 2: Refresh vào trang Feed
+#             driver.get("https://www.linkedin.com/feed/")
+#             time.sleep(5)
             
-            # Bước 3: Kiểm tra xem đã vào được Feed chưa (tránh trường hợp cookie hết hạn)
-            if "feed" in driver.current_url.lower():
-                print(f"SUCCESS: Đăng nhập Cookie thành công! Tiêu đề: {driver.current_url.lower()}")
-                return True
-            else:
-                print("WARNING: Cookie không hiệu lực (có thể đã hết hạn).")
-                return False
-        except Exception as e:
-            print(f"ERROR: Lỗi khi add cookie: {e}")
-            return False
-    else:
-        print("ERROR: Không tìm thấy biến môi trường LINKEDIN_COOKIE")
-        return False
+#             # Bước 3: Kiểm tra xem đã vào được Feed chưa (tránh trường hợp cookie hết hạn)
+#             if "feed" in driver.current_url.lower():
+#                 print(f"SUCCESS: Đăng nhập Cookie thành công! Tiêu đề: {driver.current_url.lower()}")
+#                 return True
+#             else:
+#                 print("WARNING: Cookie không hiệu lực (có thể đã hết hạn).")
+#                 return False
+#         except Exception as e:
+#             print(f"ERROR: Lỗi khi add cookie: {e}")
+#             return False
+#     else:
+#         print("ERROR: Không tìm thấy biến môi trường LINKEDIN_COOKIE")
+#         return False
         
 
-"""# **XPATH**"""
 
-# XPATH ỨNG VỚI NÚT MESSAGE.
-
-BUTTON_MESSAGE = "/html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/div/section/div/div/div[2]/div[3]/div/div/div[1]/a/span/span[contains(text(), 'Message')] | /html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/div/section/div/div/div[2]/div[3]/div/div/div[2]/a | /html/body/div[6]/div[3]/div/div/div[2]/div/div/main/section[1]/div[2]/div[3]/div/div[1]/button[contains(@aria-label, 'Message')] | /html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/section/div/div/div[2]/div[3]/div/div/div[1]/a | /html/body/div/div[2]/div[2]/div[2]/div/main/div/div/div[1]/div/div/div[1]/div/section/div/div/div[2]/div[3]/div/div/div[2]/a"  #Đổi sang full XPATH (dễ lỗi hơn nếu có updated từ linkedin)
-
-# XPATH ỨNG VỚI KHUNG TIN NHẮN. (CLASS NAME)
-FIELD_MESSAGE = "msg-form__contenteditable"
-# XPATH ỨNG VỚI KHUNG ĐÍNH KÈM TỆP. (CLASS NAME)
-FIELD_ATTACHMENT = "msg-form__attachment-upload-input"
-# XPATH ỨNG VỚI NÚT GỬI TIN NHẮN. (CLASS NAME)
-BUTTON_SUBMIT_MESSAGE = "msg-form__send-button"
-# XPATH ỨNG VỚI NÚT ĐÓNG HỘP THOẠI NHẮN TIN.
-BUTTON_CLOSE_MESSAGE = "/html/body/div[6]/div[4]/aside[1]/div[2]/div[1]/header/div[4]/button[3]"
-
-# XPATH cập nhật (LinkedIn thường xuyên đổi ID nên dùng Class hoặc Text ổn định hơn)
-FIELD_MESSAGE_CLASS = "msg-form__contenteditable"
-BUTTON_SEND_CLASS = "msg-form__send-button"
 
 """# **HÀM GỬI TIN NHẮN**"""
-def check_datum(datum):
-    # KIỂM TRA TÊN.
-    name = datum["Name"]
-    if not name:
-        print("ERROR: NAME NOT FOUND!")
-        return "ERROR: NAME NOT FOUND!"
-    # KIỂM TRA TIN NHẮN.
-    message = datum["Message"]
-    if not message:
-        print("ERROR: MESSAGE NOT FOUND!")
-        return "ERROR: MESSAGE NOT FOUND!"
-    # KIỂM TRA TỆP ĐÍNH KÈM. (XỮ LÍ ĐA NỀN TẢNG)
-    #attachment = datum["Attachment"]
-    # !wget https://github.com/InteractingAI/Automatic_Colab/blob/main/HenryUniversesResume.pdf
-    # !wget https://github.com/InteractingAI/Automatic_Colab/blob/main/tokyo-vigil-436805-j9-d6e61a754dce.json
-    attachment_name = datum.get("Attachment")
-    abs_path = None
-    if attachment_name and str(attachment_name).strip():
-        # Lấy thư mục gốc nơi script đang chạy (tương thích cả Local và Server)
-        # Nếu chạy trên GitHub Actions, nó sẽ là thư mục repo
-        base_path = Path(__file__).parent.absolute()
-        file_path = base_path / attachment_name
+# def check_datum(datum):
+#     # KIỂM TRA TÊN.
+#     name = datum["Name"]
+#     if not name:
+#         print("ERROR: NAME NOT FOUND!")
+#         return "ERROR: NAME NOT FOUND!"
+#     # KIỂM TRA TIN NHẮN.
+#     message = datum["Message"]
+#     if not message:
+#         print("ERROR: MESSAGE NOT FOUND!")
+#         return "ERROR: MESSAGE NOT FOUND!"
+#     # KIỂM TRA TỆP ĐÍNH KÈM. (XỮ LÍ ĐA NỀN TẢNG)
+#     #attachment = datum["Attachment"]
+#     # !wget https://github.com/InteractingAI/Automatic_Colab/blob/main/HenryUniversesResume.pdf
+#     # !wget https://github.com/InteractingAI/Automatic_Colab/blob/main/tokyo-vigil-436805-j9-d6e61a754dce.json
+#     attachment_name = datum.get("Attachment")
+#     abs_path = None
+#     if attachment_name and str(attachment_name).strip():
+#         # Lấy thư mục gốc nơi script đang chạy (tương thích cả Local và Server)
+#         # Nếu chạy trên GitHub Actions, nó sẽ là thư mục repo
+#         base_path = Path(__file__).parent.absolute()
+#         file_path = base_path / attachment_name
         
-        if file_path.exists():
-            abs_path = str(file_path)
-            print(f"INFO: Attachment found at: {abs_path}")
-        else:
-            print(f"WARNING: File {attachment_name} không tồn tại tại {base_path}. Sẽ gửi tin không đính kèm.")
+#         if file_path.exists():
+#             abs_path = str(file_path)
+#             print(f"INFO: Attachment found at: {abs_path}")
+#         else:
+#             print(f"WARNING: File {attachment_name} không tồn tại tại {base_path}. Sẽ gửi tin không đính kèm.")
     
-    # url = '/content/' + attachment
-    # print(url)
-    # if attachment:
-    #     rel_path = os.path.join(attachment)
-    #     abs_path = os.path.abspath(rel_path)
-    #     if not os.path.exists(abs_path):
-    #         print("ERROR: ATTACHMENT NOT FOUND!")
-    #         return "ERROR: ATTACHMENT NOT FOUND"
-    # XỬ LÝ TIN NHẮN.
-    message = message.replace("{{Name}}", name)
+#     # url = '/content/' + attachment
+#     # print(url)
+#     # if attachment:
+#     #     rel_path = os.path.join(attachment)
+#     #     abs_path = os.path.abspath(rel_path)
+#     #     if not os.path.exists(abs_path):
+#     #         print("ERROR: ATTACHMENT NOT FOUND!")
+#     #         return "ERROR: ATTACHMENT NOT FOUND"
+#     # XỬ LÝ TIN NHẮN.
+#     message = message.replace("{{Name}}", name)
 
-    return name, message, abs_path
+#     return name, message, abs_path
 
-def send_message(driver: webdriver.Chrome, target_profile, datum):
-    name, message, attachment = datum
+# def send_message(driver: webdriver.Chrome, target_profile, datum):
+#     name, message, attachment = datum
 
-    try:
-        # TÌM KIẾM NÚT MỞ HỘP THOẠI TIN NHẮN.
-        c = EC.presence_of_element_located((By.XPATH, BUTTON_MESSAGE))
-        # capture_full_page_screenshot(driver)
-        try:
-            e = WebDriverWait(driver, 15).until(c)
-        except:
-            print("ERROR: OPEN BUTTON NOT FOUND!")
-            return "ERROR: OPEN BUTTON NOT FOUND!"
-        # KIỂM TRA NÚT CÓ PHẢI LÀ NÚT MỞ HỘP THOẠI TIN NHẮN.
-        status = e.get_attribute("aria-label")
-        if "Message" not in status:
-            print("ERROR: BUTTON IS NOT MESSAGE BUTTON!")
-            return "ERROR: BUTTON IS NOT MESSAGE BUTTON!"
-        # NHẤN NÚT.
-        e.click()
-        time.sleep(2)
-        # capture_full_page_screenshot(driver)
-        # TÌM KIẾM KHUNG TIN NHẮN.
-        try:
-            e = driver.find_element(By.CLASS_NAME, FIELD_MESSAGE)
-            # capture_full_page_screenshot(driver)
-        except NoSuchElementException:
-            print("ERROR: MESSAGE BOX NOT FOUND!")
-            return "ERROR: MESSAGE BOX NOT FOUND!"
-        # XÓA TIN NHẮN MẶC ĐỊNH.
-        if e.text != "":
-            e.send_keys(Keys.CONTROL + "a")
-            e.send_keys(Keys.DELETE)
-            time.sleep(2)
-        # NHẬP TIN NHẮN.
-        e.send_keys(message)
-        time.sleep(2)
-        # capture_full_page_screenshot(driver)
-        if attachment:
-            # TÌM KIẾM KHUNG ĐÍNH KÈM.
-            try:
-                e = driver.find_element(By.CLASS_NAME, FIELD_ATTACHMENT)
-            except NoSuchElementException:
-                print("ERROR: ATTACHMENT BOX NOT FOUND!")
-                return "ERROR: ATTACHMENT BOX NOT FOUND!"
-            # ĐÍNH KÈM TỆP.
-            e.send_keys(attachment)
-            # capture_full_page_screenshot(driver)
-            #display_screenshot(driver)
-            time.sleep(2)
+#     try:
+#         # TÌM KIẾM NÚT MỞ HỘP THOẠI TIN NHẮN.
+#         c = EC.presence_of_element_located((By.XPATH, BUTTON_MESSAGE))
+#         # capture_full_page_screenshot(driver)
+#         try:
+#             e = WebDriverWait(driver, 15).until(c)
+#         except:
+#             print("ERROR: OPEN BUTTON NOT FOUND!")
+#             return "ERROR: OPEN BUTTON NOT FOUND!"
+#         # KIỂM TRA NÚT CÓ PHẢI LÀ NÚT MỞ HỘP THOẠI TIN NHẮN.
+#         status = e.get_attribute("aria-label")
+#         if "Message" not in status:
+#             print("ERROR: BUTTON IS NOT MESSAGE BUTTON!")
+#             return "ERROR: BUTTON IS NOT MESSAGE BUTTON!"
+#         # NHẤN NÚT.
+#         e.click()
+#         time.sleep(2)
+#         # capture_full_page_screenshot(driver)
+#         # TÌM KIẾM KHUNG TIN NHẮN.
+#         try:
+#             e = driver.find_element(By.CLASS_NAME, FIELD_MESSAGE)
+#             # capture_full_page_screenshot(driver)
+#         except NoSuchElementException:
+#             print("ERROR: MESSAGE BOX NOT FOUND!")
+#             return "ERROR: MESSAGE BOX NOT FOUND!"
+#         # XÓA TIN NHẮN MẶC ĐỊNH.
+#         if e.text != "":
+#             e.send_keys(Keys.CONTROL + "a")
+#             e.send_keys(Keys.DELETE)
+#             time.sleep(2)
+#         # NHẬP TIN NHẮN.
+#         e.send_keys(message)
+#         time.sleep(2)
+#         # capture_full_page_screenshot(driver)
+#         if attachment:
+#             # TÌM KIẾM KHUNG ĐÍNH KÈM.
+#             try:
+#                 e = driver.find_element(By.CLASS_NAME, FIELD_ATTACHMENT)
+#             except NoSuchElementException:
+#                 print("ERROR: ATTACHMENT BOX NOT FOUND!")
+#                 return "ERROR: ATTACHMENT BOX NOT FOUND!"
+#             # ĐÍNH KÈM TỆP.
+#             e.send_keys(attachment)
+#             # capture_full_page_screenshot(driver)
+#             #display_screenshot(driver)
+#             time.sleep(2)
 
-        # TÌM KIẾM NÚT GỬI TIN NHẮN.
-        c = EC.presence_of_element_located((By.CLASS_NAME, BUTTON_SUBMIT_MESSAGE))
-        try:
-            e = WebDriverWait(driver, 15).until(c)
-            driver.execute_script("arguments[0].click();", e)
-            # capture_full_page_screenshot(driver)
-        except:
-            print("ERROR: SUBMIT BUTTON NOT FOUND!")
-            return "ERROR: SUBMIT BUTTON NOT FOUND!"
-        # NHẤN NÚT
-        time.sleep(2)
+#         # TÌM KIẾM NÚT GỬI TIN NHẮN.
+#         c = EC.presence_of_element_located((By.CLASS_NAME, BUTTON_SUBMIT_MESSAGE))
+#         try:
+#             e = WebDriverWait(driver, 15).until(c)
+#             driver.execute_script("arguments[0].click();", e)
+#             # capture_full_page_screenshot(driver)
+#         except:
+#             print("ERROR: SUBMIT BUTTON NOT FOUND!")
+#             return "ERROR: SUBMIT BUTTON NOT FOUND!"
+#         # NHẤN NÚT
+#         time.sleep(2)
 
-        # TÌM KIẾM NÚT ĐÓNG HỘP THOẠI.
-        # c = EC.presence_of_element_located((By.XPATH, BUTTON_CLOSE_MESSAGE))
-        # try:
-        #     e = WebDriverWait(driver, 15).until(c)
-        #     display_screenshot(driver)
-        # except:
-        #     print("ERROR: CLOSE BUTTON NOT FOUND!")
-        #     return "ERROR: CLOSE BUTTON NOT FOUND!"
-        # # NHẤN NÚT.
-        # e.click()
-        # display_screenshot(driver)
-        # time.sleep(2)
+#         # TÌM KIẾM NÚT ĐÓNG HỘP THOẠI.
+#         # c = EC.presence_of_element_located((By.XPATH, BUTTON_CLOSE_MESSAGE))
+#         # try:
+#         #     e = WebDriverWait(driver, 15).until(c)
+#         #     display_screenshot(driver)
+#         # except:
+#         #     print("ERROR: CLOSE BUTTON NOT FOUND!")
+#         #     return "ERROR: CLOSE BUTTON NOT FOUND!"
+#         # # NHẤN NÚT.
+#         # e.click()
+#         # display_screenshot(driver)
+#         # time.sleep(2)
 
-        return "MESSAGE HAS SENT!"
-    except Exception as e:
-        print("\n" + str(e))
-        return "ERROR: MESSAGE NOT SENT!"
+#         return "MESSAGE HAS SENT!"
+#     except Exception as e:
+#         print("\n" + str(e))
+#         return "ERROR: MESSAGE NOT SENT!"
 
 
 
@@ -550,13 +627,9 @@ def send_message_optimized(driver, row):
     try:
         actions = ActionChains(driver)
         name = row['Name']
-        message_template = row['Message'].replace("{{Name}}", name)
-        attachment = str(row.get('Attachment', "")).strip()
-        if attachment and attachment.lower() != "nan":
+        message_template = row['Message'].replace("{{Name}}", name if name != "" else "my friend")
             # Nối link vào cuối tin nhắn theo định dạng rõ ràng
-            full_message = f"{message_template}\n\nAttached profile files: {attachment}"
-        else:
-            full_message = message_template
+        full_message = message_template
         #print(full_message)
         # attachment_path = None
         # if row.get('Attachment') and str(row.get('Attachment')).strip()!= "":
@@ -582,6 +655,7 @@ def send_message_optimized(driver, row):
                     driver.execute_script("arguments[0].click();", mess_current_element)
                     in_search_for_mess = False
             print("Đã tìm thấy và click vào nút Message bằng ActionChains")
+            driver.save_screenshot(f"message_box_found.png")
             #return "ERROR: MESSAGE BUTTON NOT FOUND"
         
         # current_element = driver.switch_to.active_element.get_attribute("class")
@@ -595,25 +669,73 @@ def send_message_optimized(driver, row):
         # if gemini_result == "YES":
         #     actions.send_keys(Keys.TAB).perform()
         #     time.sleep(0.5)
-        
+        shift_tab(actions, 0.3)
+        active_text = driver.switch_to.active_element.text.lower()
+        if any(word in active_text.split()[-1:] for word in ['connection', 'connections']):
+            print("Hệ thống không tự động focus, đang di chuyển...")
+            for _ in range(34):
+                shift_tab(actions, 0.5)
+        else:
+            print("Hệ thống đã tự động focus, lùi lại 1 step")
+            actions.send_keys(Keys.TAB).perform()
+            time.sleep(0.5)
+
+        driver.save_screenshot("debug.png")
+  
         actions.send_keys(full_message).perform()
         actions.send_keys(Keys.SPACE).perform()
-        print("Message input complete")
-        time.sleep(2)
-        #safe_type_multiline(msg_box, full_message)
-        #Nhập nội dung dùng JavaScript để hỗ trợ Link dài
-        # driver.execute_script("""
-        #     var el = arguments[0];
-        #     var text = arguments[1];
-        #     el.focus();
-        #     document.execCommand('insertText', false, text);
-        # """, msg_box, full_message)
-        #time.sleep(2)
+        driver.save_screenshot('after_message.png')
+        print("Nhập tin nhắn thành công, bắt đầu đính kèm tệp")
+        time.sleep(6)
+        
+        #Bắt đầu đính kèm tệp
+        # 1. Chuẩn bị file
+        files_to_upload = [f.strip() for f in row['Attachment'].split(',')]
+        base_path = Path(__file__).parent.absolute()
+
+        # 2. Script JavaScript để tìm input xuyên qua Shadow DOM
+        # Script này sẽ tìm từ 'interop-outlet' và đi vào shadowRoot của nó
+        find_input_in_shadow_js = """
+            const host = document.querySelector('#interop-outlet');
+            if (!host || !host.shadowRoot) return null;
+            
+            return host.shadowRoot.querySelector('input[type="file"]');
+        """
+
+        try:
+            print("🔍 Đang tìm kiếm input bên trong Shadow DOM...")
+            file_input = driver.execute_script(find_input_in_shadow_js)
+
+            if file_input:
+                print("✅ Đã tìm thấy element để input file!")
+
+                # 3. Hiển thị input để Selenium có thể tương tác
+                driver.execute_script("""
+                    arguments[0].style.display = 'block';
+                    arguments[0].style.visibility = 'visible';
+                    arguments[0].style.opacity = '1';
+                    arguments[0].classList.remove('hidden');
+                """, file_input)
+
+                # 4. Upload từng file
+                for file_name in files_to_upload:
+                    full_path = str(base_path / file_name)
+                    if os.path.exists(full_path):
+                        print(f"➡️ Đang gửi file: {full_path}")
+                        file_input.send_keys(full_path)
+                        time.sleep(2) # Đợi LinkedIn xử lý file
+                    else:
+                        print(f"File không tồn tại: {full_path}")
+            else:
+                print("Không tìm thấy input. Có thể bạn cần click vào nút kẹp giấy trước để nó render input.")
+
+        except Exception as e:
+            print(f"Lỗi: {e}")
+        driver.save_screenshot("after_send_attachment_logic.png")
         try:
             # Tìm nút Gửi bằng XPATH linh hoạt (thường ổn định hơn Class)
-            send_btn_xpath = "//button[contains(@class, 'msg-form__send-button')] | //button[text()='Send']"
             send_btn = WebDriverWait(driver, 10).until(
-                EC.element_to_be_clickable((By.XPATH, send_btn_xpath))
+                EC.element_to_be_clickable((By.XPATH, SEND_BUTTON_XPATH))
             )
             
             # Click bằng JavaScript để vượt qua các lớp đè (Overlay)
@@ -736,7 +858,7 @@ def main_mess():
             continue
 
         # Kiểm tra nếu thiếu Name, Link hoặc Message thì bỏ qua
-        if pd.isna(profile_link) or profile_link == "" or pd.isna(name) or name == "" or pd.isna(message) or message == "":
+        if pd.isna(profile_link) or profile_link == "" or pd.isna(message) or message == "":
             print(f"SKIP: Dòng {index+2} thiếu thông tin.")
             df.at[index, 'Status'] = "ERROR: MISSING DATA"
             continue
@@ -749,38 +871,36 @@ def main_mess():
 
         print(f"Processing: {profile_link}")
         
-        datum = check_datum(row)
-        if isinstance(datum, str):
-            status = datum
-        else:
-            #Thử lại tối đa 3 lần nếu gặp lỗi Exception
-            
-            status = "ERROR: FAILED AFTER RETRIES"
-            
-            for attempt in range(MAX_RETRIES):
-                try:
-                    driver.get(profile_link)
-                    random_delay(5, 10) 
+        # datum = check_datum(row)
+        # if isinstance(datum, str):
+        #     status = datum
                     
-                    result = send_message_optimized(driver, row)
-                    if result == "UNKNOWN":
-                        status = "MESSAGE_UNKNOWN"
-                    if result == "SUCCESS":
-                        send_count += 1
-                        sent_links.add(profile_link)
-                        status = "MESSAGE_SENT"
-                        print(f"-> Gửi thành công đến {name} (Lần thử {attempt + 1}) Hôm nay: {send_count}/{MAX_MESSAGES_PER_DAY}")
-                        break # Thoát vòng lặp retry nếu thành công
-                    else:
-                        status = result
-                        print(f"-> Thử lại lần {attempt + 1} cho {name} do lỗi: {result}")
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                driver.get(profile_link)
+                random_delay(5, 10) 
                 
-                except Exception as e:
-                    status = f"ERROR: {str(e)}"
-                    print(f"-> Lỗi Exception lần {attempt + 1} cho {name}: {e}")
+                result = send_message_optimized(driver, row)
+                status = "MESSAGE_SENT" if result == "SUCCESS" else (f"MESSAGE_{result}" if result == "UNKNOWN" else result)
+
+                if result == "SUCCESS":
+                    send_count += 1
+                    sent_links.add(profile_link)
+                    print(f"-> Gửi thành công đến {profile_link} | Lần {attempt}: {send_count}/{MAX_MESSAGES_PER_DAY}")
+                    break 
                 
-                # Delay một chút trước khi thử lại dòng đó
+                print(f"-> Thử lại lần {attempt} do lỗi: {result}")
+
+            except Exception as e:
+                status = f"ERROR: {str(e)}"
+                print(f"-> Lỗi Exception lần {attempt}: {e}")
+            
+            # Chỉ delay nếu chưa phải lần thử cuối cùng
+            if attempt < MAX_RETRIES:
                 random_delay(5, 8)
+        else:
+            # Vòng lặp chạy hết mà không break (không SUCCESS)
+            status = status if "ERROR" in status else "ERROR: FAILED AFTER RETRIES"
 
         # Cập nhật trạng thái vào DataFrame
         df.at[index, 'Status'] = status
@@ -808,6 +928,3 @@ def main_mess():
     """# **KẾT THÚC CHƯƠNG TRÌNH**"""
     driver.quit()
     print("ĐÃ THOÁT")
-
-if __name__ == "__main__":
-    main_mess()
