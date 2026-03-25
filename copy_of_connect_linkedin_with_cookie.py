@@ -724,6 +724,8 @@ def main_connect():
     password = os.getenv("LINKEDIN_PASSWORD")
     login(driver, username, password)
 
+    ActionChains.send_keys(Keys.ESCAPE).perform()
+    
     send_count = 0
 
     # 3. VÒNG LẶP XỬ LÝ
@@ -760,6 +762,7 @@ def main_connect():
                 df.iat[index, 2] = "Không tồn tại"
                 df.iat[index, 3] = "ERROR: 404 Not Found | Không tìm thấy Link"
                 continue
+            ActionChains.send_keys(Keys.ESCAPE).perform()
             driver.save_screenshot(f"before_check_index{index+2}.png")
             # Kiểm tra và gửi connect
             #email_to_fill = row.get("Email để điền khi gặp câu hỏi trog lúc connect", "")
