@@ -897,6 +897,7 @@ def main_mess():
         #Nếu Status là MESSAGE_SENT thì bỏ qua dòng đó
         if current_status == "MESSAGE_SENT":
             print(f"SKIP: Dòng {index+2} ({name}) đã gửi thành công trước đó.")
+            send_count += 1
             continue
 
         # Kiểm tra nếu thiếu Name, Link hoặc Message thì bỏ qua
