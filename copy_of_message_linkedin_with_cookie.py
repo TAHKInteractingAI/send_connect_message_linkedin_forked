@@ -363,7 +363,7 @@ def login(driver: webdriver.Chrome, username: str, password: str):
             # Tải cookies và thử đăng nhập
         load_cookies(driver, COOKIES_FILE)
         driver.get("https://www.linkedin.com/feed")
-        time.sleep(3)
+        time.sleep(10)
 
         # Kiểm tra xem đã đăng nhập chưa bằng cách xem có biểu tượng người dùng không
         try:
