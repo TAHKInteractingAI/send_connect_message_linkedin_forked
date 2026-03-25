@@ -367,7 +367,7 @@ def login(driver: webdriver.Chrome, username: str, password: str):
 
         # Kiểm tra xem đã đăng nhập chưa bằng cách xem có biểu tượng người dùng không
         try:
-            user_icon = WebDriverWait(driver, 10).until(
+            user_icon = WebDriverWait(driver, 20).until(
                 EC.presence_of_element_located((By.CLASS_NAME, 'global-nav__me-photo')))
             print("INFO: Logged in using cookies!")
             driver.save_screenshot("cookie-login.png")
@@ -384,6 +384,11 @@ def login(driver: webdriver.Chrome, username: str, password: str):
     print("INFO: Bắt đầu login thủ công")
     # Nếu thông tin đăng nhập đã thay đổi hoặc không có cookies, đăng nhập thủ công
     driver.get("https://www.linkedin.com/login")
+    time.sleep(5)
+    if "feed" in driver.current_url.lower():
+        print(f"SUCCESS: Đã tự động vào Feed tại {driver.current_url}. Bỏ qua bước nhập pass.")
+        save_cookies(driver) # Lưu lại cookie mới cho chắc
+        return
     driver.save_screenshot("before_input.png")
     username_field = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, XPATH_USERNAME)))
     password_field = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, XPATH_PASSWORD)))
