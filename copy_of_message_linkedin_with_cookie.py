@@ -639,6 +639,23 @@ def send_message_optimized(driver, row):
         # attachment_path = None
         # if row.get('Attachment') and str(row.get('Attachment')).strip()!= "":
         #     attachment_path = os.path.abspath(row['Attachment'])
+        try:
+            find_close_bubble_shadow_js = """
+                const host = document.querySelector('#interop-outlet');
+                if (host && host.shadowRoot) {
+                    const element = host.shadowRoot.querySelector('button.msg-overlay-bubble-header__control:has(svg[data-test-icon="close-small"][aria-hidden="true"])');
+                    if (element) {
+                        element.click();
+                        return true;
+                    }
+                }
+                return false;
+            """
+            driver.execute_script(find_close_bubble_shadow_js)
+            print("Đã ấn nút thoát")
+        except Exception:
+            print(f"Không tìm thấy nút thoát bubble, tiếp tục")
+            
         # TÌM NÚT MESSAGE
         try:
             msg_btn = WebDriverWait(driver, 10).until(
@@ -678,8 +695,28 @@ def send_message_optimized(driver, row):
         active_text = driver.switch_to.active_element.text.lower()
         if any(word in active_text.split()[-1:] for word in ['connection', 'connections']):
             print("Hệ thống không tự động focus, đang di chuyển...")
-            for _ in range(34):
-                shift_tab(actions, 0.5)
+            # for _ in range(34):
+            #     shift_tab(actions, 0.5)
+            find_msg_area_and_click_js = """
+                const host = document.querySelector('#interop-outlet');
+                if (host && host.shadowRoot) {
+                    const element = host.shadowRoot.querySelector('div.msg-form__contenteditable');
+                    if (element) {
+                        element.focus(); // Focus trước khi làm việc khác
+                        element.click();
+                        return true;
+                    }
+                }
+                return false;
+            """
+            try:
+                # 2. Thực thi (Chỉ cần truyền 1 tham số là chuỗi script)
+                driver.execute_script(find_msg_area_and_click_js)
+                print("✅ Đã tìm thấy và click vào khung chat!")
+            except Exception as e:
+                print(f"INFO: {e}")
+                for _ in range(0, 35):
+                    shift_tab(actions, 0.5)
         else:
             print("Hệ thống đã tự động focus, lùi lại 1 step")
             actions.send_keys(Keys.TAB).perform()
@@ -697,7 +734,7 @@ def send_message_optimized(driver, row):
         # 1. Chuẩn bị file
         files_to_upload = [f.strip() for f in row['Attachment'].split(',')]
         base_path = Path(__file__).parent.absolute()
-
+        print(f"INFO: {files_to_upload}")
         # 2. Script JavaScript để tìm input xuyên qua Shadow DOM
         # Script này sẽ tìm từ 'interop-outlet' và đi vào shadowRoot của nó
         find_input_in_shadow_js = """
