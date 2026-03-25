@@ -825,59 +825,13 @@ def main_mess():
         
     driver = get_driver()
     
-    # # THỰC HIỆN ĐĂNG NHẬP
-    # # Thử bằng cookie trước
-    # logged_in = login_with_cookie(driver)
-    
-    # # Nếu cookie thất bại, thử login bằng username/password
-    # if not logged_in:
-    #     print("INFO: Chuyển sang đăng nhập bằng Username/Password...")
-    #     username = os.getenv("LINKEDIN_USERNAME")
-    #     password = os.getenv("LINKEDIN_PASSWORD")
-    #     if username and password:
-    #         try:
-    #             login(driver, username, password)
-    #             logged_in = True
-    #         except Exception as e:
-    #             print(f"CRITICAL: Đăng nhập thủ công thất bại: {e}")
-    #     else:
-    #         print("CRITICAL: Thiếu thông tin LINKEDIN_USERNAME/PASSWORD trong .env")
-
-    # # Nếu đăng nhập thành công (bằng bất cứ cách nào) thì mới chạy tiếp
-    # if logged_in:
     username = os.getenv("LINKEDIN_USERNAME")
     password = os.getenv("LINKEDIN_PASSWORD")
     login(driver, username, password)
     """# **THỰC HIỆN GỬI KẾT NỐI**"""
-    # send_count = 0
-    # for index, row in df.iterrows():
-    #     if send_count >= MAX_MESSAGES_PER_DAY:
-    #         print(f"INFO: Đã đạt giới hạn {MAX_MESSAGES_PER_DAY} người/ngày")
-    #         break  
-    #     profile_link = row['Link']
-    #     print(f"Processing: {profile_link}")
-    #     datum = check_datum(row)
-    #     if isinstance(datum, str):
-    #         status = datum
-    #     else:
-    #         try:
-    #             driver.get(profile_link)
-    #             random_delay(5, 10) # Tránh bị LinkedIn quét bot
-    #             status = send_message_optimized(driver, row)
-    #             if status == "SUCCESS":
-    #                 send_count += 1
-    #                 status = "MESSAGE_SENT"
-    #                 print(f"-> Gửi thành công đến {row['Name']} ({send_count}/{MAX_MESSAGES_PER_DAY})")
-    #                 driver.save_screenshot(f"success_sent_{send_count}.png")
-    #         except Exception as e:
-    #             status = f"ERROR: {str(e)}"
-    #             print(status)
-    #     # Cập nhật trạng thái vào DataFrame
-    #     df.at[index, 'Status'] = status
-    #     # Nghỉ giữa các lần gửi để tránh bị khóa account
-    #     if send_count < MAX_MESSAGES_PER_DAY:
-    #         random_delay(15, 25)
-
+    ActionChains.send_keys(Keys.ESCAPE).perform()
+    
+    
     send_count = 0
     sent_links = set()  # Tập hợp để theo dõi các link đã gửi trong phiên này
     
@@ -922,6 +876,7 @@ def main_mess():
             try:
                 driver.get(profile_link)
                 random_delay(5, 10) 
+                ActionChains.send_keys(Keys.ESCAPE).perform()
                 
                 result = send_message_optimized(driver, row)
                 status = "MESSAGE_SENT" if result == "SUCCESS" else (f"MESSAGE_{result}" if result == "UNKNOWN" else result)
