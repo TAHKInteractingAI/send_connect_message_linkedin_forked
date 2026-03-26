@@ -829,7 +829,7 @@ def main_mess():
     password = os.getenv("LINKEDIN_PASSWORD")
     login(driver, username, password)
     """# **THỰC HIỆN GỬI KẾT NỐI**"""
-    ActionChains.send_keys(Keys.ESCAPE).perform()
+    ActionChains(driver).send_keys(Keys.ESCAPE).perform()
     
     
     send_count = 0
@@ -876,7 +876,7 @@ def main_mess():
             try:
                 driver.get(profile_link)
                 random_delay(5, 10) 
-                ActionChains.send_keys(Keys.ESCAPE).perform()
+                ActionChains(driver).send_keys(Keys.ESCAPE).perform()
                 
                 result = send_message_optimized(driver, row)
                 status = "MESSAGE_SENT" if result == "SUCCESS" else (f"MESSAGE_{result}" if result == "UNKNOWN" else result)
