@@ -69,6 +69,11 @@ GOOGLE_CREDS = os.getenv('GOOGLE_APPLICATION_CRED')
 #     null
 # ).singleNodeValue;
 # """
+# Login fields/buttons
+XPATH_USERNAME = '//*[@id="username"]'
+XPATH_PASSWORD = '//*[@id="password"]'
+XPATH_LOGIN_BUTTON = '//button[contains(@class, "btn__primary--large") and @aria-label="Sign in"]'
+
 XPATH_MAIN_CONNECT = (
             # "//main//a[contains(@class, 'profile-top-card')]//button[contains(@aria-label, 'to connect')]"
             # "| //main//a[contains(@class, 'profile-top-card')]//a[contains(@aria-label, 'to connect')]"
@@ -361,14 +366,87 @@ def handle_code_verification(driver: webdriver.Chrome):
         print("INFO: NO VERIFICATION DETECTED!")
         print(e)
 
+# def login(driver: webdriver.Chrome, username: str, password: str):
+#     """Đăng nhập vào LinkedIn với username và password mới nếu có sự thay đổi"""
+#     XPATH_USERNAME = '//*[@id="username"]'
+#     XPATH_PASSWORD = '//*[@id="password"]'
+#     XPATH_LOGIN_BUTTON = '//button[contains(@class, "btn__primary--large") and @aria-label="Sign in"]'
+
+#     driver.get("https://www.linkedin.com/login")
+#     time.sleep(2)  # Ensure the page is fully loaded
+
+#     if os.path.exists(COOKIES_FILE):# and credentials:
+#         # Kiểm tra nếu username hoặc password đã thay đổi
+#         #if credentials['username'] == username and credentials['password'] == password:
+#             # Tải cookies và thử đăng nhập
+#         load_cookies(driver, COOKIES_FILE)
+#         driver.get("https://www.linkedin.com/feed")
+#         time.sleep(10)
+
+#         # Kiểm tra xem đã đăng nhập chưa bằng cách xem có biểu tượng người dùng không
+#         try:
+#             user_icon = WebDriverWait(driver, 20).until(
+#                 EC.presence_of_element_located((By.CLASS_NAME, 'global-nav__me-photo')))
+#             print("INFO: Đã đăng nhập với cookies!")
+#             driver.save_screenshot("cookie-login.png")
+#             # save user_icon
+#             #user_icon.screenshot("user_icon.png")
+#             # display_screenshot(driver, "status.png")
+#             return
+#         except Exception as e:
+#             print(f"INFO: Đăng nhập Cookie không thành công: {e}")
+#             os.remove(COOKIES_FILE)
+#     else:
+#         print("INFO: Không có file cookies")
+        
+#     print("INFO: Bắt đầu login thủ công")
+#     # Nếu thông tin đăng nhập đã thay đổi hoặc không có cookies, đăng nhập thủ công
+#     driver.get("https://www.linkedin.com/login")
+#     time.sleep(5)
+#     if "feed" in driver.current_url.lower():
+#         print(f"SUCCESS: Đã tự động vào Feed tại {driver.current_url}. Bỏ qua bước nhập pass.")
+#         save_cookies(driver) # Lưu lại cookie mới cho chắc
+#         return
+    
+#     driver.save_screenshot("before_input.png")
+#     username_field = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, XPATH_USERNAME)))
+#     password_field = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, XPATH_PASSWORD)))
+    
+    
+#     human_type(username_field, username)
+#     #username_field.send_keys(username)
+#     time.sleep(2)
+#     human_type(password_field, password)
+#     #password_field.send_keys(password)
+#     time.sleep(2)
+#     for i in range(5):
+#         try:
+#             WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH, XPATH_LOGIN_BUTTON))).click()
+#             print(f"Click login thành công ở lần {i+1}")
+#             break
+#         except Exception as e:
+#             print(f"STALE ERROR {i+1}: {e}")
+#             time.sleep(1)
+    
+    
+#     time.sleep(15)
+#     driver.save_screenshot("before_verification.png")
+#     handle_code_verification(driver)
+#     handle_cookie_acceptance(driver)
+#     # Lưu cookies và thông tin đăng nhập sau khi đăng nhập thành công
+#     save_cookies(driver)
+#     #save_credentials(username, password)
+#     print("INFO: Đăng nhập thành công và đã lưu cookies, thông tin đăng nhập!")
+#     driver.save_screenshot("post-login.png")
 def login(driver: webdriver.Chrome, username: str, password: str):
     """Đăng nhập vào LinkedIn với username và password mới nếu có sự thay đổi"""
-    XPATH_USERNAME = '//*[@id="username"]'
-    XPATH_PASSWORD = '//*[@id="password"]'
-    XPATH_LOGIN_BUTTON = '//button[contains(@class, "btn__primary--large") and @aria-label="Sign in"]'
+    # Use module-level XPATH constants defined at top
 
     driver.get("https://www.linkedin.com/login")
     time.sleep(2)  # Ensure the page is fully loaded
+
+    # Kiểm tra nếu có cookies và kiểm tra xem username, password có thay đổi không
+    #credentials = load_credentials()
 
     if os.path.exists(COOKIES_FILE):# and credentials:
         # Kiểm tra nếu username hoặc password đã thay đổi
@@ -382,7 +460,7 @@ def login(driver: webdriver.Chrome, username: str, password: str):
         try:
             user_icon = WebDriverWait(driver, 20).until(
                 EC.presence_of_element_located((By.CLASS_NAME, 'global-nav__me-photo')))
-            print("INFO: Đã đăng nhập với cookies!")
+            print("INFO: Logged in using cookies!")
             driver.save_screenshot("cookie-login.png")
             # save user_icon
             #user_icon.screenshot("user_icon.png")
@@ -402,11 +480,10 @@ def login(driver: webdriver.Chrome, username: str, password: str):
         print(f"SUCCESS: Đã tự động vào Feed tại {driver.current_url}. Bỏ qua bước nhập pass.")
         save_cookies(driver) # Lưu lại cookie mới cho chắc
         return
-    
     driver.save_screenshot("before_input.png")
     username_field = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, XPATH_USERNAME)))
     password_field = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, XPATH_PASSWORD)))
-    
+    login_button = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, XPATH_LOGIN_BUTTON)))
     
     human_type(username_field, username)
     #username_field.send_keys(username)
@@ -414,17 +491,9 @@ def login(driver: webdriver.Chrome, username: str, password: str):
     human_type(password_field, password)
     #password_field.send_keys(password)
     time.sleep(2)
-    for i in range(5):
-        try:
-            WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH, XPATH_LOGIN_BUTTON))).click()
-            print(f"Click login thành công ở lần {i+1}")
-            break
-        except Exception as e:
-            print(f"STALE ERROR {i+1}: {e}")
-            time.sleep(1)
-    
-    
-    time.sleep(15)
+    login_button.click()
+
+    time.sleep(10)
     driver.save_screenshot("before_verification.png")
     handle_code_verification(driver)
     handle_cookie_acceptance(driver)
@@ -433,7 +502,6 @@ def login(driver: webdriver.Chrome, username: str, password: str):
     #save_credentials(username, password)
     print("INFO: Đăng nhập thành công và đã lưu cookies, thông tin đăng nhập!")
     driver.save_screenshot("post-login.png")
-
 
 """# **HÀM GỬI KẾT NỐI**"""
 
