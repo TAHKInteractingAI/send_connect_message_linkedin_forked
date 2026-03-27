@@ -24,22 +24,16 @@ from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
-#from IPython.display import Image, display
 from dotenv import load_dotenv
 import pickle
-from PIL import Image
 # === GOOGLE SHEETS LOCAL SETUP ===
-import pickle
 import pandas as pd
-import requests
 from googleapiclient.discovery import build
 from google.oauth2 import service_account
 # === GOOGLE SHEETS LOCAL SETUP ===
-import pickle
 import random
 import json
 import pandas as pd
-import requests
 from googleapiclient.discovery import build
 from google.oauth2 import service_account
 # === FastAPI API ===
