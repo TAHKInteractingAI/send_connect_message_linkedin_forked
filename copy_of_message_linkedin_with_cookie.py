@@ -13,9 +13,6 @@ from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
-from google import genai
-from google.genai import types
-from google.genai.errors import ServerError
 #from IPython.display import Image, display
 from oauth2client.service_account import ServiceAccountCredentials
 import requests
