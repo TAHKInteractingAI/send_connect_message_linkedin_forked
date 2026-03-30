@@ -363,28 +363,34 @@ def login(driver: webdriver.Chrome, username: str, password: str):
         time.sleep(10)
 
         # Kiểm tra xem đã đăng nhập chưa bằng cách xem có biểu tượng người dùng không
-        try:
-            user_icon = WebDriverWait(driver, 20).until(
-                EC.presence_of_element_located((By.CLASS_NAME, 'global-nav__me-photo')))
-            print("INFO: Logged in using cookies!")
-            driver.save_screenshot("cookie-login.png")
-            # save user_icon
-            #user_icon.screenshot("user_icon.png")
-            # display_screenshot(driver, "status.png")
-            return
-        except Exception as e:
-            print(f"INFO: Đăng nhập Cookie không thành công: {e}")
+        # try:
+        #     user_icon = WebDriverWait(driver, 20).until(
+        #         EC.presence_of_element_located((By.CLASS_NAME, 'global-nav__me-photo')))
+        #     print("INFO: Logged in using cookies!")
+        #     driver.save_screenshot("cookie-login.png")
+        #     # save user_icon
+        #     #user_icon.screenshot("user_icon.png")
+        #     # display_screenshot(driver, "status.png")
+        #     return
+        # except Exception as e:
+        #     print(f"INFO: Đăng nhập Cookie không thành công: {e}")
+        #     os.remove(COOKIES_FILE)
+        print(f"Current url: {driver.current_url}")
+        if "linkedin.com/login" in driver.current_url or "checkpoint" in driver.current_url:
+            print(f"INFO: Đăng nhập Cookie không thành công")
             os.remove(COOKIES_FILE)
+        else:
+            print("Đăng nhập cookie ok")
+            return
     else:
         print("INFO: Không có file cookies")
         
     print("INFO: Bắt đầu login thủ công")
-    # Nếu thông tin đăng nhập đã thay đổi hoặc không có cookies, đăng nhập thủ công
     driver.get("https://www.linkedin.com/login")
     time.sleep(5)
     if "feed" in driver.current_url.lower():
         print(f"SUCCESS: Đã tự động vào Feed tại {driver.current_url}. Bỏ qua bước nhập pass.")
-        save_cookies(driver) # Lưu lại cookie mới cho chắc
+        save_cookies(driver)
         return
     driver.save_screenshot("before_input.png")
     username_field = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, XPATH_USERNAME)))
@@ -408,50 +414,6 @@ def login(driver: webdriver.Chrome, username: str, password: str):
     #save_credentials(username, password)
     print("INFO: Đăng nhập thành công và đã lưu cookies, thông tin đăng nhập!")
     driver.save_screenshot("post-login.png")
-    # user_icon = WebDriverWait(driver, 10).until(
-    #                 EC.presence_of_element_located((By.CLASS_NAME, 'global-nav__me-photo')))
-    # # save user_icon
-    # user_icon.screenshot("user_icon.png")
-    # display_screenshot(driver, "status.png")
-    # display_full_screenshot(driver)
-
-# def login_with_cookie(driver):
-#     """Xử lý đăng nhập bằng Cookie li_at từ .env"""
-#     print("INFO: Đang thử đăng nhập bằng Cookie...")
-#     # Bước 1: Vào domain LinkedIn trước để trình duyệt chấp nhận cookie
-#     driver.get("https://www.linkedin.com/login")
-#     time.sleep(3)
-
-#     li_at_cookie = os.getenv("LINKEDIN_COOKIE")
-    
-#     if li_at_cookie:
-#         try:
-#             driver.delete_all_cookies()
-#             driver.add_cookie({
-#                 "name": "li_at",
-#                 "value": li_at_cookie,
-#                 "domain": ".linkedin.com",
-#                 "path": "/",
-#                 "secure": True
-#             })
-            
-#             # Bước 2: Refresh vào trang Feed
-#             driver.get("https://www.linkedin.com/feed/")
-#             time.sleep(5)
-            
-#             # Bước 3: Kiểm tra xem đã vào được Feed chưa (tránh trường hợp cookie hết hạn)
-#             if "feed" in driver.current_url.lower():
-#                 print(f"SUCCESS: Đăng nhập Cookie thành công! Tiêu đề: {driver.current_url.lower()}")
-#                 return True
-#             else:
-#                 print("WARNING: Cookie không hiệu lực (có thể đã hết hạn).")
-#                 return False
-#         except Exception as e:
-#             print(f"ERROR: Lỗi khi add cookie: {e}")
-#             return False
-#     else:
-#         print("ERROR: Không tìm thấy biến môi trường LINKEDIN_COOKIE")
-#         return False
         
 
 
