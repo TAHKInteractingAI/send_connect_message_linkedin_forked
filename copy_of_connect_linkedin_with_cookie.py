@@ -587,7 +587,9 @@ def send_connection(driver: webdriver.Chrome, profile_mail: str):
             except Exception as e: 
                 print(f"Lỗi: {e}\nKhông tìm thấy nút More với XPATH, bắt đầu dùng actionChains")
                 in_search_for_more = True
-                while in_search_for_more:
+                tab_count = 0
+                max_tabs = 20
+                while in_search_for_more and tab_count < max_tabs:
                     actions.send_keys(Keys.TAB).perform()
                     cur_element_more = driver.switch_to.active_element
                     cur_element_more_text = cur_element_more.text.strip()
@@ -595,62 +597,42 @@ def send_connection(driver: webdriver.Chrome, profile_mail: str):
                     if cur_element_more_text in ["More", "Xem thêm"]:
                         driver.execute_script("arguments[0].click();", cur_element_more)
                         in_search_for_more = False
+                    tab_count += 1
+                if in_search_for_more:
+                    print(f"Bỏ cuộc: Không tìm thấy nút More sau {max_tabs} lần Tab.")
+                    return "FAILED"
                 print("Đã ấn More bằng actionChains, bắt đầu tìm Connect trong More với actionChains")
                 time.sleep(3)
             #Dùng vòng lặp While, detect từng li_item.text trong more modal, nếu pending return "ALREADY PENDED", nếu REMOVE/UNFOLLOW return "CONNECTED", nếu thấy CONNECT thì bấm, còn không thấy gì thì thoát ra và return "FAILED"
             in_more = True
-            while in_more:
-                try:
-                    time.sleep(random.uniform(0.25, 0.5))
-                    actions.send_keys(Keys.TAB).perform()
-                    cur_element = driver.switch_to.active_element
-                    cur_element_text = cur_element.text.strip()
-                    print(f"Nút hiện tại cho check trạng thái: {cur_element_text}")
-                    if cur_element_text == "Pending":
-                        print("Trạng thái: Đang chờ xác nhận (Pending). Tìm thấy Pending từ trong More")
-                        ActionChains(driver).send_keys(Keys.ESCAPE).perform()
-                        return "ALREADY PENDED"
-                    if cur_element_text in ["Remove connection", "Unfollow"]:
-                        print(f"Trạng thái: Đã kết nối.Tìm thấy từ trong More")
-                        ActionChains(driver).send_keys(Keys.ESCAPE).perform()
-                        return "CONNECTED"
-                    if cur_element_text in ["Connect", "Connect with note"]:
-                        print(f"Trạng thái: Chưa kết nối. Tìm thấy nút Connect từ trong More, chuẩn bị click.")
-                        driver.execute_script("arguments[0].click();", cur_element)
-                        #actions.send_keys(Keys.SPACE).perform()
-                        in_more = False                        
-                #     if cur_element_text in ["Request a recommendation"]:
-                #         print("")
-                #     if cur_element_text != "Connect" and cur_element_text != "Invite":
-                #         actions.send_keys(Keys.TAB).perform()
-                #         time.sleep(random.uniform(0.25, 0.3))
-                #     # actions.send_keys(Keys.SPACE).perform()
-                #     # time.sleep(1)
-                #     success = press_space_with_backup(2, actions, driver)
-                #     if success:
-                #         print("🚀 JavaScript đã ép gửi thành công!")
-                #     else:
-                #         # Nếu không tìm thấy nút bằng text, thử click vào phần tử đang focus
-                #         print("🔍 Thử click vào active_element hiện tại...")
-                #         driver.execute_script("arguments[0].click();", driver.switch_to.active_element)
-                #     #Đi vào Modal xác nhận
-                #     press_multiple_tab(actions, 3, 0.5)
-                #     # actions.send_keys(Keys.SPACE).perform()
-                #     # time.sleep(2)
-                #     # print("🚀 Đã gửi yêu cầu kết nối thành công!")
-                #     # return "START PENDING"
-                #     success = press_space_with_backup(2, actions, driver)
-                #     if success:
-                #         print("🚀 JavaScript đã ép gửi thành công!")
-                #         return "START PENDING"
-                #     else:
-                #         # Nếu không tìm thấy nút bằng text, thử click vào phần tử đang focus
-                #         print("🔍 Thử click vào active_element hiện tại...")
-                #         driver.execute_script("arguments[0].click();", driver.switch_to.active_element)
-                #         return "START PENDING"    
-                except Exception as e:
-                    print(f"❌ Lỗi tại actionChains: {str(e)}")
-                    return "FAILED"
+            tab_more_max = 10
+            tab_more_count = 10
+            while in_more and tab_more_count < tab_more_max:
+                time.sleep(random.uniform(0.25, 0.5))
+                actions.send_keys(Keys.TAB).perform()
+                cur_element = driver.switch_to.active_element
+                cur_element_text = cur_element.text.strip()
+                print(f"Nút hiện tại cho check trạng thái: {cur_element_text}")
+                if cur_element_text == "Pending":
+                    print("Trạng thái: Đang chờ xác nhận (Pending). Tìm thấy Pending từ trong More")
+                    ActionChains(driver).send_keys(Keys.ESCAPE).perform()
+                    more_result = "ALREADY PENDED"
+                    in_more = False
+                if cur_element_text in ["Remove connection", "Unfollow"]:
+                    print(f"Trạng thái: Đã kết nối.Tìm thấy từ trong More")
+                    ActionChains(driver).send_keys(Keys.ESCAPE).perform()
+                    more_result = "CONNECTED"
+                    in_more = False
+                if cur_element_text in ["Connect", "Connect with note"]:
+                    print(f"Trạng thái: Chưa kết nối. Tìm thấy nút Connect từ trong More, chuẩn bị click.")
+                    driver.execute_script("arguments[0].click();", cur_element)
+                    #actions.send_keys(Keys.SPACE).perform()
+                    in_more = False
+                if in_more:
+                    print(f"Bỏ cuộc: Hết lượt search item trong More sau {tab_more_max} lần Tab.")
+                    more_result = "FAILED"
+                return more_result
+                
 
         # Bước 3: Click vào nút Connect
         
@@ -889,7 +871,7 @@ def main_connect():
             spreadsheetId=SPREADSHEET_ID,
             body=batch_update_values_request_body
         ).execute()
-        print(f"✅ Batch Update thành công vùng {update_range}! (Dòng 1 tiêu đề đã được bảo vệ)")
+        print(f"✅ Batch Update thành công vùng {update_range}!")
     except Exception as e:
         print(f"❌ Lỗi Batch Update: {e}")
         # Backup plan: Chia nhỏ (Chunking) nhưng vẫn giữ logic bắt đầu từ dòng 2
