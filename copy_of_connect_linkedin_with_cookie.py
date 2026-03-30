@@ -452,28 +452,34 @@ def login(driver: webdriver.Chrome, username: str, password: str):
         time.sleep(10)
 
         # Kiểm tra xem đã đăng nhập chưa bằng cách xem có biểu tượng người dùng không
-        try:
-            user_icon = WebDriverWait(driver, 20).until(
-                EC.presence_of_element_located((By.CLASS_NAME, 'global-nav__me-photo')))
-            print("INFO: Logged in using cookies!")
-            driver.save_screenshot("cookie-login.png")
-            # save user_icon
-            #user_icon.screenshot("user_icon.png")
-            # display_screenshot(driver, "status.png")
-            return
-        except Exception as e:
-            print(f"INFO: Đăng nhập Cookie không thành công: {e}")
+        # try:
+        #     user_icon = WebDriverWait(driver, 20).until(
+        #         EC.presence_of_element_located((By.CLASS_NAME, 'global-nav__me-photo')))
+        #     print("INFO: Logged in using cookies!")
+        #     driver.save_screenshot("cookie-login.png")
+        #     # save user_icon
+        #     #user_icon.screenshot("user_icon.png")
+        #     # display_screenshot(driver, "status.png")
+        #     return
+        # except Exception as e:
+        #     print(f"INFO: Đăng nhập Cookie không thành công: {e}")
+        #     os.remove(COOKIES_FILE)
+        print(f"Current url: {driver.current_url}")
+        if "linkedin.com/login" in driver.current_url or "checkpoint" in driver.current_url:
+            print(f"INFO: Đăng nhập Cookie không thành công")
             os.remove(COOKIES_FILE)
+        else:
+            print("Đăng nhập cookie ok")
+            return
     else:
         print("INFO: Không có file cookies")
         
     print("INFO: Bắt đầu login thủ công")
-    # Nếu thông tin đăng nhập đã thay đổi hoặc không có cookies, đăng nhập thủ công
     driver.get("https://www.linkedin.com/login")
     time.sleep(5)
     if "feed" in driver.current_url.lower():
         print(f"SUCCESS: Đã tự động vào Feed tại {driver.current_url}. Bỏ qua bước nhập pass.")
-        save_cookies(driver) # Lưu lại cookie mới cho chắc
+        save_cookies(driver)
         return
     driver.save_screenshot("before_input.png")
     username_field = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, XPATH_USERNAME)))
@@ -605,9 +611,7 @@ def send_connection(driver: webdriver.Chrome, profile_mail: str):
                 time.sleep(3)
             #Dùng vòng lặp While, detect từng li_item.text trong more modal, nếu pending return "ALREADY PENDED", nếu REMOVE/UNFOLLOW return "CONNECTED", nếu thấy CONNECT thì bấm, còn không thấy gì thì thoát ra và return "FAILED"
             in_more = True
-            tab_more_max = 10
-            tab_more_count = 10
-            while in_more and tab_more_count < tab_more_max:
+            while in_more:
                 time.sleep(random.uniform(0.25, 0.5))
                 actions.send_keys(Keys.TAB).perform()
                 cur_element = driver.switch_to.active_element
@@ -616,22 +620,16 @@ def send_connection(driver: webdriver.Chrome, profile_mail: str):
                 if cur_element_text == "Pending":
                     print("Trạng thái: Đang chờ xác nhận (Pending). Tìm thấy Pending từ trong More")
                     ActionChains(driver).send_keys(Keys.ESCAPE).perform()
-                    more_result = "ALREADY PENDED"
-                    in_more = False
+                    return "ALREADY PENDED"
                 if cur_element_text in ["Remove connection", "Unfollow"]:
                     print(f"Trạng thái: Đã kết nối.Tìm thấy từ trong More")
                     ActionChains(driver).send_keys(Keys.ESCAPE).perform()
-                    more_result = "CONNECTED"
-                    in_more = False
+                    return "CONNECTED"
                 if cur_element_text in ["Connect", "Connect with note"]:
                     print(f"Trạng thái: Chưa kết nối. Tìm thấy nút Connect từ trong More, chuẩn bị click.")
                     driver.execute_script("arguments[0].click();", cur_element)
                     #actions.send_keys(Keys.SPACE).perform()
                     in_more = False
-                if in_more:
-                    print(f"Bỏ cuộc: Hết lượt search item trong More sau {tab_more_max} lần Tab.")
-                    more_result = "FAILED"
-                return more_result
                 
 
         # Bước 3: Click vào nút Connect
@@ -691,14 +689,46 @@ def send_connection(driver: webdriver.Chrome, profile_mail: str):
             #     time.sleep(3)
             #     return "START PENDING"
             
-        except Exception as e:
-            print(f"Không tìm thấy Modal mail note xác thực: {e}, vào bước 4.2")
-            # Bước 4.2: Xử lý Modal gửi kết nối khi không cần mail note xác thực (Thao tác phím để tránh lỗi XPath popup) 
-            press_multiple_tab(actions, 3, 0.5)
-            actions.send_keys(Keys.SPACE).perform()
-            time.sleep(2)
-            #actions.send_keys(Keys.ESCAPE).perform()
-            return "START PENDING"                
+        except:
+            print(f"Không tìm thấy Modal mail note xác thực, vào bước 4.2")
+            try:
+    # Viết JS để vừa tìm vừa click luôn
+                click_js = """
+                        const host = document.querySelector('#interop-outlet');
+    if (host && host.shadowRoot) {
+        const buttons = host.shadowRoot.querySelectorAll('button');
+        for (let btn of buttons) {
+            if (btn.innerText.includes('Send') || btn.getAttribute('aria-label')?.includes('Send')) {
+                btn.click();
+                return true;
+            }
+        }
+    }
+    return false;
+                """
+                
+                # Thực thi script và lấy kết quả trả về
+                success = driver.execute_script(click_js)
+                
+                if success:
+                    print("✅ Đã click 'Send without a note' qua Shadow DOM")
+                    time.sleep(3)
+                    return "START PENDING"
+                else:
+                    # Nếu JS trả về false, chủ động raise lỗi để nhảy xuống block except
+                    raise Exception("Shadow element not found")
+
+            except Exception as e:
+                print(f"Không tìm thấy qua JS, thử với ActionChain. Lỗi: {e}")
+                # Bước 4.2: Backup bằng phím
+                # actions.move_by_offset(1920/2, 80).click().perform()
+                # print("Click!")
+                time.sleep(1)
+                #press_multiple_tab(actions, 3, 0.5)
+                actions.key_down(Keys.LEFT_SHIFT).send_keys(Keys.TAB).key_up(Keys.LEFT_SHIFT).perform()
+                actions.send_keys(Keys.SPACE).perform()
+                time.sleep(2)
+                return "START PENDING"
         
                 
     except Exception as e:
@@ -768,7 +798,6 @@ def main_connect():
     username = os.getenv("LINKEDIN_USERNAME")
     password = os.getenv("LINKEDIN_PASSWORD")
     login(driver, username, password)
-
     ActionChains(driver).send_keys(Keys.ESCAPE).perform()
     
     send_count = 0
