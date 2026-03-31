@@ -241,7 +241,7 @@ def get_driver():
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument('--disable-gpu')
     options.add_argument('--headless=new')
-    options.add_argument("--window-size=1920,1200")
+    options.add_argument("--window-size=1920,1080")
     options.page_load_strategy = 'eager'
     # 2.2 Ép trình duyệt và Header luôn yêu cầu tiếng Anh (vài text button không phải tiếng anh)
     options.add_argument('--lang=en-GB') 
