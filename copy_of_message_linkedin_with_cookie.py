@@ -19,6 +19,7 @@ import requests
 import pandas as pd
 from dotenv import load_dotenv
 import gspread
+from gspread.exceptions import APIError
 from pathlib import Path
 
 load_dotenv()
@@ -159,7 +160,19 @@ def random_delay(min_s=2, max_s=5):
     
 #     return df
 def get_data_with_links(sheet):
-    all_values = sheet.get_all_values()
+    def call_with_retry(func, *args, **kwargs):
+        for attempt in range(5):  # Max 5 attempts
+            try:
+                return func(*args, **kwargs)
+            except APIError as e:
+                if e.response.status_code in [503, 429]:
+                    wait_time = (2 ** attempt)  # 1, 2, 4, 8 seconds
+                    print(f"Google API {e.response.status_code} error. Retrying in {wait_time}s...")
+                    time.sleep(wait_time)
+                else:
+                    raise e
+        return func(*args, **kwargs)
+    all_values = call_with_retry(sheet.get_all_values)
     if len(all_values) < 2:
         return pd.DataFrame()
 
@@ -170,15 +183,17 @@ def get_data_with_links(sheet):
     spreadsheet = sheet.spreadsheet
     sheet_name = sheet.title
     range_metadata = f"{sheet_name}!E2:E{1 + num_rows}"
-    
-    res_metadata = spreadsheet.fetch_sheet_metadata({
-        'includeGridData': True,
-        'ranges': [range_metadata]
-    })
+    res_metadata = call_with_retry(spreadsheet.fetch_sheet_metadata, {'includeGridData': True, 'ranges': [range_metadata]})
+    # res_metadata = spreadsheet.fetch_sheet_metadata({
+    #     'includeGridData': True,
+    #     'ranges': [range_metadata]
+    # })
     
     file_names_per_row = []
     sheets_data = res_metadata.get('sheets', [])[0].get('data', [])[0]
     rowData = sheets_data.get('rowData', [])
+    if not rowData:
+        return pd.DataFrame(data_rows, columns=headers)
     
     for row in rowData:
         names = []
