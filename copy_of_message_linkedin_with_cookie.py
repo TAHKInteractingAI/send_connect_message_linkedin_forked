@@ -365,7 +365,7 @@ def login(driver: webdriver.Chrome, username: str, password: str):
 
     driver.get("https://www.linkedin.com/login")
     time.sleep(2)  # Ensure the page is fully loaded
-
+    print(f"URL login: {driver.current_url}")
     # Kiểm tra nếu có cookies và kiểm tra xem username, password có thay đổi không
     #credentials = load_credentials()
 
