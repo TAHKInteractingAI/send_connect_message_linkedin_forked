@@ -818,7 +818,7 @@ def main_connect():
 
         # LOGIC SKIP: Chỉ chạy nếu chưa gửi connect và chưa là bạn bè
         # Chấp nhận các ô trống hoặc giá trị nan
-        is_processed = current_dropdown != "" and current_dropdown != "nan"
+        is_processed = current_dropdown != "" or current_dropdown != "nan" or current_dropdown != "không tồn tại"
         is_connected = current_status_text in ["CONNECTED", "PENDING", "START PENDING", "ALREADY PENDED", "RETRY LATER IN 3 DAYS"]
 
         if is_processed or is_connected:
