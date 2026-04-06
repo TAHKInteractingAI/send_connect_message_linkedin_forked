@@ -494,7 +494,7 @@ def login(driver: webdriver.Chrome, username: str, password: str):
     time.sleep(2)
     login_button.click()
 
-    time.sleep(15)
+    time.sleep(30)
     driver.save_screenshot("before_verification.png")
     handle_code_verification(driver)
     handle_cookie_acceptance(driver)
