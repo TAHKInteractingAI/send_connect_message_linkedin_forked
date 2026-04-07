@@ -2,7 +2,7 @@
 import json
 import os
 import time
-import base64
+import undetected_chromedriver as uc
 import random, pickle
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -57,9 +57,9 @@ FIELD_MESSAGE_CLASS = "msg-form__contenteditable"
 BUTTON_SEND_CLASS = "msg-form__send-button"
 XPATH_ACCEPT_BUTTON = "//button[span[text()='Accept']]"
 # Login fields/buttons
-XPATH_USERNAME = '//*[@id="username"]'
-XPATH_PASSWORD = '//*[@id="password"]'
-XPATH_LOGIN_BUTTON = '//button[contains(@class, "btn__primary--large") and @aria-label="Sign in"]'
+XPATH_USERNAME = '//*[@id="username"]' #| //input[@id=":r3:"] | //input[contains(@id, "r")] | //input[@autocomplete="username" or @autocomplete="webauthn"]'
+XPATH_PASSWORD = '//*[@id="password"]'# | //input[@id=":r4:"] | //input[contains(@id, "r")] | //input[@autocomplete="current-password"]'
+XPATH_LOGIN_BUTTON = '//button[contains(@class, "btn__primary--large") and @aria-label="Sign in"]'#| //button[.//text()[contains(., "Sign in") or contains(., "Log in") or contains(., "Đăng nhập")]]'
 # Message/send related
 SEND_BUTTON_XPATH = "//button[contains(@class, 'msg-form__send-button')] | //button[text()='Send']"
 
@@ -287,41 +287,97 @@ df = get_data_with_links(sheet)
 # df.head()
 
 """# **CẤU HÌNH DRIVER**"""
-def get_driver():
-    options = webdriver.ChromeOptions()
+# def get_driver():
+#     options = webdriver.ChromeOptions()
     
-    # 1. Định nghĩa một User-Agent nhất quán (Tránh khai báo 2 lần)
-    user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    options.add_argument(f"user-agent={user_agent}")
+#     # 1. Định nghĩa một User-Agent nhất quán (Tránh khai báo 2 lần)
+#     user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+#     options.add_argument(f"user-agent={user_agent}")
 
-    # 2. Các thiết lập cơ bản cho môi trường Linux/Docker (GitHub Actions)
+#     # 2. Các thiết lập cơ bản cho môi trường Linux/Docker (GitHub Actions)
+#     options.add_argument('--no-sandbox')
+#     options.add_argument("--disable-dev-shm-usage")
+#     options.add_argument('--disable-gpu')
+#     options.add_argument('--headless=new')
+#     options.add_argument("--window-size=1920,1080")
+    
+#     # 3. CHỐNG PHÁT HIỆN BOT (Stealth Mode)
+#     # Loại bỏ cờ 'nút điều khiển tự động'
+#     options.add_experimental_option("excludeSwitches", ["enable-automation"])
+#     options.add_experimental_option('useAutomationExtension', False)
+#     # Vô hiệu hóa tính năng AutomationControlled của Blink
+#     options.add_argument("--disable-blink-features=AutomationControlled")
+    
+#     # Thêm các cờ để trình duyệt giống người dùng thật hơn
+#     options.add_argument("--disable-infobars")
+#     options.add_argument("--disable-notifications")
+    
+#     # Khởi tạo driver
+#     service = Service(ChromeDriverManager().install())
+#     driver = webdriver.Chrome(service=service, options=options)
+    
+#     # 4. Ẩn thuộc tính navigator.webdriver bằng Script thực thi ngay khi load trang
+#     driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
+#         "source": """
+#             Object.defineProperty(navigator, 'webdriver', {
+#                 get: () => undefined
+#             })
+#         """
+#     })
+    
+#     return driver
+def get_driver():
+    options = uc.ChromeOptions()
+    
+    # 1. Cấu hình cơ bản cho môi trường Headless (GitHub Actions)
+    options.add_argument('--headless=new')
     options.add_argument('--no-sandbox')
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument('--disable-gpu')
-    options.add_argument('--headless=new')
     options.add_argument("--window-size=1920,1080")
     
-    # 3. CHỐNG PHÁT HIỆN BOT (Stealth Mode)
-    # Loại bỏ cờ 'nút điều khiển tự động'
-    options.add_experimental_option("excludeSwitches", ["enable-automation"])
-    options.add_experimental_option('useAutomationExtension', False)
-    # Vô hiệu hóa tính năng AutomationControlled của Blink
-    options.add_argument("--disable-blink-features=AutomationControlled")
+    # 2. [TĂNG TỐC] Chiến lược load trang
+    # 'eager' giúp trình duyệt không chờ đợi tải xong ảnh hay script bên thứ 3
+    options.page_load_strategy = 'eager'
     
-    # Thêm các cờ để trình duyệt giống người dùng thật hơn
-    options.add_argument("--disable-infobars")
-    options.add_argument("--disable-notifications")
+    # 3. [TĂNG TỐC] Chặn tải hình ảnh, CSS và Fonts để tiết kiệm băng thông và RAM
+    prefs = {
+        "profile.managed_default_content_settings.images": 2,
+        "profile.managed_default_content_settings.stylesheets": 2,
+        "profile.managed_default_content_settings.fonts": 2
+    }
+    options.add_experimental_option("prefs", prefs)
     
-    # Khởi tạo driver
-    service = Service(ChromeDriverManager().install())
-    driver = webdriver.Chrome(service=service, options=options)
+    # 4. Ép trình duyệt dùng tiếng Anh
+    options.add_argument('--lang=en-GB')
     
-    # 4. Ẩn thuộc tính navigator.webdriver bằng Script thực thi ngay khi load trang
+    # 5. [CHỐNG PHÁT HIỆN] Thêm Proxy dân cư (Khuyến nghị)
+    # Trên GitHub Actions, hãy set secrets.PROXY_URL (ví dụ: http://user:pass@ip:port)
+    proxy_url = os.getenv("PROXY_URL")
+    if proxy_url:
+        options.add_argument(f'--proxy-server={proxy_url}')
+    
+    # Khởi tạo undetected_chromedriver (Không dùng webdriver.Chrome thông thường)
+    driver = uc.Chrome(options=options, version_main=146)
+    
+    # 6. [CHỐNG PHÁT HIỆN] Bơm thêm Stealth Script qua CDP
     driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
         "source": """
-            Object.defineProperty(navigator, 'webdriver', {
-                get: () => undefined
-            })
+            // Ẩn webdriver
+            Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
+            
+            // Fake runtime của Chrome (Bot thường không có cái này)
+            window.navigator.chrome = { runtime: {} };
+            
+            // Bơm thêm plugins giả
+            Object.defineProperty(navigator, 'plugins', {
+                get: () => [1, 2, 3, 4, 5]
+            });
+            
+            // Ép ngôn ngữ
+            Object.defineProperty(navigator, 'languages', {
+                get: () => ['en-GB', 'en-US', 'en']
+            });
         """
     })
     
