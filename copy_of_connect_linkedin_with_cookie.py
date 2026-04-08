@@ -286,12 +286,12 @@ def get_driver():
     options.page_load_strategy = 'eager'
     
     # 3. [TĂNG TỐC] Chặn tải hình ảnh, CSS và Fonts để tiết kiệm băng thông và RAM
-    prefs = {
-        "profile.managed_default_content_settings.images": 2,
-        "profile.managed_default_content_settings.stylesheets": 2,
-        "profile.managed_default_content_settings.fonts": 2
-    }
-    options.add_experimental_option("prefs", prefs)
+    # prefs = {
+    #     "profile.managed_default_content_settings.images": 2,
+    #     "profile.managed_default_content_settings.stylesheets": 2,
+    #     "profile.managed_default_content_settings.fonts": 2
+    # }
+    # options.add_experimental_option("prefs", prefs)
     
     # 4. Ép trình duyệt dùng tiếng Anh
     options.add_argument('--lang=en-GB')
