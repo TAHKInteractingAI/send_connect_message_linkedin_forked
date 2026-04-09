@@ -30,6 +30,7 @@ import pickle
 import pandas as pd
 from googleapiclient.discovery import build
 from google.oauth2 import service_account
+from googleapiclient.errors import HttpError
 # === GOOGLE SHEETS LOCAL SETUP ===
 import random
 import json
@@ -210,7 +211,18 @@ def human_type(element, text):
         time.sleep(random.uniform(0.1, 0.3))
 
 """# **KẾT NỐI GOOGLE SHEETS**"""
-
+def execute_with_retry(request, max_retries=5):
+    for i in range(max_retries):
+        try:
+            return request.execute()
+        except HttpError as e:
+            if e.resp.status in [500, 502, 503, 504] and i < max_retries - 1:
+                wait_time = (2 ** i) + random.random()
+                print(f"Google Sheets Service quá tải tạm thời (503). Thử lại sau {wait_time:.2f}s...")
+                time.sleep(wait_time)
+                continue
+            raise e
+        
 def get_gsheet_service():
     scopes = ['https://www.googleapis.com/auth/spreadsheets']
     info = json.loads(GOOGLE_CREDS)
@@ -220,7 +232,8 @@ def get_gsheet_service():
 
 service = get_gsheet_service()
 sheet = service.spreadsheets()
-result = sheet.values().get(spreadsheetId=SPREADSHEET_ID, range=RANGE_NAME).execute()
+requests_spreadsheet = sheet.values().get(spreadsheetId=SPREADSHEET_ID, range=RANGE_NAME)
+result = execute_with_retry(requests_spreadsheet)
 values = result.get('values', [])
 max_cols = max(len(row) for row in values) if values else 0
 values = [row + [''] * (max_cols - len(row)) for row in values]
@@ -791,7 +804,9 @@ def send_connection(driver: webdriver.Chrome, profile_mail: str):
         print(f"❌ Lỗi tại send_connection: {str(e)}")
         actions.send_keys(Keys.ESCAPE).perform()
         return "FAILED"
-    
+
+
+
 def check_connection(driver: webdriver.Chrome, profile_mail: str = ""):
     try:
         # # 1. Cuộn trang trước khi kiểm tra để load đủ dữ liệu
