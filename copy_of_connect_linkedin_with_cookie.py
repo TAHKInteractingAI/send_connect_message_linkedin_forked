@@ -40,7 +40,7 @@ from googleapiclient.discovery import build
 from google.oauth2 import service_account
 # === FastAPI API ===
 
-load_dotenv()
+load_dotenv(override=True)
 
 # --- CONFIG ---
 MISSIVE_API_KEY = os.getenv('MISSIVE_API_KEY')

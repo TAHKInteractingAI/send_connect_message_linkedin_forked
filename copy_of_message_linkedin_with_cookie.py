@@ -22,7 +22,7 @@ import gspread
 from gspread.exceptions import APIError
 from pathlib import Path
 
-load_dotenv()
+load_dotenv(override=True)
 
 """# **CONFIG**"""
 MAX_RETRIES = 3
