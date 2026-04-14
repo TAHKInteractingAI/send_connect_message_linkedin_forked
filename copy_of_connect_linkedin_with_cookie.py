@@ -52,6 +52,7 @@ MAX_LIMIT = 15
 SPREADSHEET_ID = os.getenv('SPREADSHEET_ID')
 RANGE_NAME = "Sheet1!A:E"
 GOOGLE_CREDS = os.getenv('GOOGLE_APPLICATION_CRED')
+TARGET_URL = "https://www.linkedin.com/uas/login?session_redirect=https%3A%2F%2Fwww.linkedin.com%2Ffeed%2F"
 
 """# **XPATH**"""
 
@@ -506,7 +507,7 @@ def login(driver: webdriver.Chrome, username: str, password: str):
     """Đăng nhập vào LinkedIn với username và password mới nếu có sự thay đổi"""
     # Use module-level XPATH constants defined at top
 
-    driver.get("https://www.linkedin.com/login")
+    driver.get(TARGET_URL)
     time.sleep(2)  # Ensure the page is fully loaded
     print(f"URL login: {driver.current_url}")
     # Kiểm tra nếu có cookies và kiểm tra xem username, password có thay đổi không
@@ -517,7 +518,7 @@ def login(driver: webdriver.Chrome, username: str, password: str):
         #if credentials['username'] == username and credentials['password'] == password:
             # Tải cookies và thử đăng nhập
         load_cookies(driver, COOKIES_FILE)
-        driver.get("https://www.linkedin.com/feed")
+        driver.refresh()
         time.sleep(10)
 
         # Kiểm tra xem đã đăng nhập chưa bằng cách xem có biểu tượng người dùng không
