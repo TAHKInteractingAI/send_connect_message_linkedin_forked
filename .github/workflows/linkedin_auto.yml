@@ -44,13 +44,12 @@ jobs:
         env:
           SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
-          RANGE_NAME: ${{ secrets.RANGE_NAME }}
           GOOGLE_APPLICATION_CRED: ${{ secrets.GOOGLE_APPLICATION_CRED }}
           LINKEDIN_USERNAME: ${{ secrets.LINKEDIN_USERNAME }}
           LINKEDIN_PASSWORD: ${{ secrets.LINKEDIN_PASSWORD }}
-          LINKEDIN_COOKIE: ${{ secrets.LINKEDIN_COOKIE }}
           MISSIVE_API_KEY: ${{ secrets.MISSIVE_API_KEY }}
-        run: python -c "from copy_of_connect_linkedin_with_cookie import main_connect; main_connect()"
+        run: |
+          xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" python copy_of_connect_linkedin_with_cookie.py
 
       - name: Run Message Script
         if: github.event.action == 'run-linkedin-message'
@@ -60,9 +59,9 @@ jobs:
           LINKEDIN_USERNAME: ${{ secrets.LINKEDIN_USERNAME }}
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
           LINKEDIN_PASSWORD: ${{ secrets.LINKEDIN_PASSWORD }}
-          LINKEDIN_COOKIE: ${{ secrets.LINKEDIN_COOKIE }}
           MISSIVE_API_KEY: ${{ secrets.MISSIVE_API_KEY }}
-        run: python -c "from copy_of_message_linkedin_with_cookie import main_mess; main_mess()"
+        run: |
+          xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" python copy_of_message_linkedin_with_cookie.py
 
       # 3. Dọn dẹp Cache cũ (Chỉ giữ lại 1 cái mới nhất)
       - name: Cleanup old caches
