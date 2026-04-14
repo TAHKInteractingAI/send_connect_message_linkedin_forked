@@ -289,7 +289,7 @@ def get_driver():
     options = uc.ChromeOptions()
     
     # 1. Cấu hình cơ bản cho môi trường Headless (GitHub Actions)
-    options.add_argument('--headless=new')
+    #options.add_argument('--headless=new')
     options.add_argument('--no-sandbox')
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument('--disable-gpu')
