@@ -43,7 +43,6 @@ jobs:
         if: github.event.action == 'run-linkedin-connect'
         env:
           SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
-          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
           GOOGLE_APPLICATION_CRED: ${{ secrets.GOOGLE_APPLICATION_CRED }}
           LINKEDIN_USERNAME: ${{ secrets.LINKEDIN_USERNAME }}
           LINKEDIN_PASSWORD: ${{ secrets.LINKEDIN_PASSWORD }}
@@ -57,7 +56,6 @@ jobs:
           SPREADSHEET_MESS_ID: ${{ secrets.SPREADSHEET_MESS_ID }}
           GOOGLE_APPLICATION_CRED: ${{ secrets.GOOGLE_APPLICATION_CRED }}
           LINKEDIN_USERNAME: ${{ secrets.LINKEDIN_USERNAME }}
-          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
           LINKEDIN_PASSWORD: ${{ secrets.LINKEDIN_PASSWORD }}
           MISSIVE_API_KEY: ${{ secrets.MISSIVE_API_KEY }}
         run: |

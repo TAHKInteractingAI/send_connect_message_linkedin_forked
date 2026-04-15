@@ -957,3 +957,6 @@ def main_mess():
     """# **KẾT THÚC CHƯƠNG TRÌNH**"""
     driver.quit()
     print("ĐÃ THOÁT")
+
+if __name__ == "__main__":
+    main_mess()
