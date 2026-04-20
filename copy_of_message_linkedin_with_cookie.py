@@ -453,7 +453,7 @@ def login(driver: webdriver.Chrome, username: str, password: str):
             os.remove(COOKIES_FILE)
         else:
             print("Đăng nhập cookie ok")
-            return
+            return True
     else:
         print("INFO: Không có file cookies")
         
@@ -463,7 +463,7 @@ def login(driver: webdriver.Chrome, username: str, password: str):
     if "feed" in driver.current_url.lower():
         print(f"SUCCESS: Đã tự động vào Feed tại {driver.current_url}. Bỏ qua bước nhập pass.")
         save_cookies(driver)
-        return
+        return True
     driver.save_screenshot("before_input.png")
     username_field = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, XPATH_USERNAME)))
     password_field = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, XPATH_PASSWORD)))
@@ -486,7 +486,7 @@ def login(driver: webdriver.Chrome, username: str, password: str):
     #save_credentials(username, password)
     print("INFO: Đăng nhập thành công và đã lưu cookies, thông tin đăng nhập!")
     driver.save_screenshot("post-login.png")
-        
+    return True
 
 
 
@@ -858,7 +858,14 @@ def main_mess():
     
     username = os.getenv("LINKEDIN_USERNAME")
     password = os.getenv("LINKEDIN_PASSWORD")
-    login(driver, username, password)
+    for attempt_to_login in range(5):
+        print(f"Attempt {attempt_to_login + 1}: Đang đăng nhập...")
+        if login(driver, username, password):
+            print("Đăng nhập thành công!")
+            break
+        else:
+            print("Đăng nhập thất bại, thử lại sau 5 giây...")
+            time.sleep(5)
     """# **THỰC HIỆN GỬI KẾT NỐI**"""
     ActionChains(driver).send_keys(Keys.ESCAPE).perform()
     
